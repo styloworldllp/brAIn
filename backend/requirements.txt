@@ -1,0 +1,38 @@
+# Web framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# AI providers
+anthropic==0.44.0
+openai==1.51.0
+
+# File handling
+python-multipart==0.0.12
+aiofiles==24.1.0
+
+# Data processing
+pandas==2.2.2
+numpy==1.26.4
+openpyxl==3.1.5
+pyarrow==17.0.0
+
+# Visualisation (used inside the sandbox)
+plotly==5.24.0
+
+# Database connectors
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.9
+pymysql==1.1.1
+
+# Google Sheets
+gspread==6.1.2
+google-auth==2.35.0
+
+# ML / stats
+scikit-learn==1.5.2
+scipy==1.14.1
+
+# Utilities
+python-dotenv==1.0.1
+httpx==0.27.2
+
