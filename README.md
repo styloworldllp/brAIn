@@ -1,6 +1,6 @@
 # AI Data Analyst
 
-A Julius.ai-style data analysis platform built with Next.js + FastAPI + Claude AI.
+BrAIn by Stylo is a data analysis platform built with Next.js + FastAPI + Claude AI.
 Upload your data, ask questions in plain English, and get Python-powered insights and charts.
 
 ## Features
