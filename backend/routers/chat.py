@@ -116,10 +116,10 @@ def chat_stream(req: ChatRequest, db: Session = Depends(get_db)):
     collected_code   = []
     collected_output = []
     collected_charts = []
-
+    dataset_data = _dataset_dict(dataset)
     def generate():
         for raw in stream_chat(
-            dataset      = _dataset_dict(dataset),
+            dataset      = dataset_data,
             history      = history,
             user_message = req.message,
             provider     = ai_settings["provider"],
