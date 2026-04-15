@@ -5,9 +5,10 @@ export interface Dataset {
   name: string;
   source_type: string;
   row_count: number;
-  schema_info: Record<string, { dtype: string; null_count: number; sample_values: unknown[] }>;
+  schema_info: Record<string, any>;
   sample_data: Record<string, unknown>[];
   created_at: string;
+  all_tables?: string[];
 }
 
 export interface Conversation {
@@ -74,9 +75,7 @@ export const fetchConversations = (dataset_id: string): Promise<Conversation[]> 
   fetch(`${BASE}/chat/conversations?dataset_id=${dataset_id}`).then((r) => r.json());
 
 export const createConversation = (dataset_id: string): Promise<{ id: string; title: string }> =>
-  fetch(`${BASE}/chat/conversations?dataset_id=${dataset_id}`, { method: "POST" }).then((r) =>
-    r.json()
-  );
+  fetch(`${BASE}/chat/conversations?dataset_id=${dataset_id}`, { method: "POST" }).then((r) => r.json());
 
 export const fetchMessages = (conversation_id: string): Promise<Message[]> =>
   fetch(`${BASE}/chat/conversations/${conversation_id}/messages`).then((r) => r.json());
@@ -93,9 +92,9 @@ export function streamChat(
     body: JSON.stringify({ conversation_id, message }),
   }).then((response) => {
     if (!response.ok) throw new Error("Stream failed");
-    const reader = response.body!.getReader();
+    const reader  = response.body!.getReader();
     const decoder = new TextDecoder();
-    let buffer = "";
+    let buffer    = "";
 
     function pump(): Promise<void> {
       return reader.read().then(({ done, value }) => {
@@ -105,10 +104,7 @@ export function streamChat(
         buffer = lines.pop() || "";
         for (const line of lines) {
           if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              onEvent(data);
-            } catch {}
+            try { onEvent(JSON.parse(line.slice(6))); } catch {}
           }
         }
         return pump();
