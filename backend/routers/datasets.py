@@ -7,12 +7,13 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 
-from db import get_db, Dataset
+from db import get_db, Dataset, User
+from routers.auth import require_brain_access
 from services.data_loader import (
-    load_csv, load_excel, load_from_db, load_all_tables,
+    load_csv, load_excel, load_from_db,
     test_db_connection, load_google_sheet_public,
     load_google_sheet_service_account,
-    save_as_parquet, get_schema_info, get_sample_data,
+    save_as_parquet, get_schema_info, get_sample_data, load_all_tables,
 )
 
 router = APIRouter()
@@ -38,14 +39,22 @@ def _serialise(d: Dataset) -> dict:
 # ── List ──────────────────────────────────────────────────────────────────────
 
 @router.get("/")
-def list_datasets(db: Session = Depends(get_db)):
+def list_datasets(db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
     return [_serialise(d) for d in db.query(Dataset).order_by(Dataset.created_at.desc()).all()]
 
 
 # ── Delete ────────────────────────────────────────────────────────────────────
 
+@router.get("/{dataset_id}")
+def get_dataset(dataset_id: str, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
+    d = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not d:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+    return _serialise(d)
+
+
 @router.delete("/{dataset_id}")
-def delete_dataset(dataset_id: str, db: Session = Depends(get_db)):
+def delete_dataset(dataset_id: str, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
     d = db.query(Dataset).filter(Dataset.id == dataset_id).first()
     if not d:
         raise HTTPException(status_code=404, detail="Dataset not found")
@@ -64,7 +73,7 @@ def delete_dataset(dataset_id: str, db: Session = Depends(get_db)):
 # ── Upload CSV / Excel ────────────────────────────────────────────────────────
 
 @router.post("/upload")
-async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
     ext = Path(file.filename).suffix.lower()
     if ext not in (".csv", ".xlsx", ".xls"):
         raise HTTPException(status_code=400, detail="Only CSV and Excel files are supported.")
@@ -109,7 +118,7 @@ class DBConnectRequest(BaseModel):
 
 
 @router.post("/connect-db")
-def connect_database(req: DBConnectRequest, db: Session = Depends(get_db)):
+def connect_database(req: DBConnectRequest, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
     prefix     = "postgresql" if req.db_type == "postgres" else "mysql+pymysql"
     conn_str   = f"{prefix}://{req.username}:{req.password}@{req.host}:{req.port}/{req.database}"
 
@@ -154,7 +163,7 @@ def connect_database(req: DBConnectRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/test-db")
-def test_db(req: DBConnectRequest):
+def test_db(req: DBConnectRequest, _: User = Depends(require_brain_access)):
     prefix   = "postgresql" if req.db_type == "postgres" else "mysql+pymysql"
     conn_str = f"{prefix}://{req.username}:{req.password}@{req.host}:{req.port}/{req.database}"
     return test_db_connection(conn_str)
@@ -168,8 +177,50 @@ class SheetsConnectRequest(BaseModel):
     service_account_json: Optional[str] = None
 
 
+
+@router.post("/{dataset_id}/pii-config")
+def save_pii_config(dataset_id: str, body: dict, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
+    """Save PII column exclusion config for a dataset."""
+    d = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not d:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+    excluded = body.get("excluded_columns", [])
+    manual_pii = body.get("manual_pii", {})
+    schema = d.schema_info or {}
+    if isinstance(schema, dict):
+        schema["__excluded_flat__"] = excluded
+        if isinstance(manual_pii, dict) and manual_pii:
+            schema["__manual_pii__"] = manual_pii
+            for col, info in manual_pii.items():
+                if col in schema and isinstance(schema[col], dict):
+                    schema[col]["pii"] = {
+                        "is_pii": True,
+                        "category": info.get("category"),
+                        "severity": info.get("severity"),
+                        "confidence": "manual",
+                    }
+        # For live connections, rebuild per-table exclusion map
+        if schema.get("__live__") and schema.get("__tables__"):
+            excl_map = {}
+            for table in schema["__tables__"]:
+                table_cols = list(schema.get(table, {}).keys())
+                excl_map[table] = [c for c in excluded if c in table_cols]
+                if isinstance(manual_pii, dict):
+                    for col, info in manual_pii.items():
+                        if col in schema.get(table, {}) and isinstance(schema[table][col], dict):
+                            schema[table][col]["pii"] = {
+                                "is_pii": True,
+                                "category": info.get("category"),
+                                "severity": info.get("severity"),
+                                "confidence": "manual",
+                            }
+            schema["__excluded__"] = excl_map
+    d.schema_info = schema
+    db.commit()
+    return {"ok": True, "excluded": excluded}
+
 @router.post("/connect-sheets")
-def connect_sheets(req: SheetsConnectRequest, db: Session = Depends(get_db)):
+def connect_sheets(req: SheetsConnectRequest, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
     try:
         df = (
             load_google_sheet_service_account(req.sheet_url, req.service_account_json)
@@ -191,6 +242,52 @@ def connect_sheets(req: SheetsConnectRequest, db: Session = Depends(get_db)):
         row_count   = len(df),
         schema_info = get_schema_info(df),
         sample_data = get_sample_data(df),
+    )
+    db.add(d)
+    db.commit()
+    return _serialise(d)
+
+
+# ── Connect Database — SINGLE TABLE (specific) ────────────────────────────────
+
+class DBTableRequest(BaseModel):
+    name:          str
+    db_type:       str
+    host:          str
+    port:          int
+    database:      str
+    username:      str
+    password:      str
+    table_or_query: str
+
+
+@router.post("/connect-db-table")
+def connect_database_table(req: DBTableRequest, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
+    prefix   = "postgresql" if req.db_type == "postgres" else "mysql+pymysql"
+    conn_str = f"{prefix}://{req.username}:{req.password}@{req.host}:{req.port}/{req.database}"
+
+    test = test_db_connection(conn_str)
+    if not test["success"]:
+        raise HTTPException(status_code=400, detail=test["error"])
+
+    try:
+        df = load_from_db(conn_str, req.table_or_query)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    dataset_id   = str(uuid.uuid4())
+    parquet_path = save_as_parquet(df, dataset_id)
+
+    d = Dataset(
+        id                = dataset_id,
+        name              = req.name,
+        source_type       = req.db_type,
+        connection_string = conn_str,
+        table_or_query    = req.table_or_query,
+        file_path         = parquet_path,
+        row_count         = len(df),
+        schema_info       = get_schema_info(df),
+        sample_data       = get_sample_data(df),
     )
     db.add(d)
     db.commit()

@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
+import { AISpinner } from "./AISpinner";
 import {
   Plus, Upload, Database, Table2, Trash2,
   MessageSquare, ChevronRight, FileText,
-  Sheet, Loader2
+  Sheet
 } from "lucide-react";
 import {
   Dataset, Conversation, fetchDatasets, fetchConversations,
@@ -171,7 +172,7 @@ export default function DataSidebar({
                       disabled={loadingConv}
                       className="flex items-center gap-1.5 w-full text-left px-2 py-1.5 text-[10px] text-[#6c63ff] hover:text-[#8b85ff] transition-colors"
                     >
-                      {loadingConv ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
+                      {loadingConv ? <AISpinner size={11} /> : <Plus size={11} />}
                       New conversation
                     </button>
                     {conversations.map((conv) => (

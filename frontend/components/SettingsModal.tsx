@@ -1,230 +1,173 @@
 "use client";
 import { useState, useEffect } from "react";
-import { X, Eye, EyeOff, CheckCircle2, Loader2, Zap } from "lucide-react";
-
-interface Settings {
-  provider: string;
-  anthropic_model: string;
-  openai_model: string;
-  has_anthropic_key: boolean;
-  has_openai_key: boolean;
-}
-
-interface Props {
-  onClose: () => void;
-}
+import { X, Plus, Trash2, Moon, Sun, Monitor } from "lucide-react";
+import { getStoredUser, isAdmin, withAuthHeaders } from "@/lib/auth";
 
 const BASE = "http://localhost:8000/api";
+interface SecretKey { id: string; name: string; created_at?: string; has_value?: boolean; }
+interface Props { onClose: () => void; }
+const inp = "w-full rounded-lg px-3 py-2 text-sm placeholder-[#9999b0] focus:outline-none focus:ring-1 focus:ring-[#00c896]/60 transition-colors";
 
-const ANTHROPIC_MODELS = [
-  { value: "claude-opus-4-6",    label: "Claude Opus 4 (most capable)" },
-  { value: "claude-sonnet-4-6",  label: "Claude Sonnet 4 (fast + smart)" },
-  { value: "claude-haiku-4-5-20251001",   label: "Claude Haiku (fastest)" },
-];
-
-const OPENAI_MODELS = [
-  { value: "gpt-4o",      label: "GPT-4o (most capable)" },
-  { value: "gpt-4o-mini", label: "GPT-4o Mini (faster)" },
-  { value: "gpt-4-turbo", label: "GPT-4 Turbo" },
-];
-
-const inputClass =
-  "w-full bg-[#0d0f1a] border border-[#1e2235] rounded-lg px-3 py-2 text-sm text-[#e8eaf0] placeholder-[#3e4357] focus:outline-none focus:border-violet-500/60 transition-colors";
+function applyTheme(t: string) {
+  const h = document.documentElement;
+  h.classList.remove("dark", "light");
+  if (t === "light") h.classList.add("light");
+  else if (t === "system") {
+    h.classList.add(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  } else {
+    h.classList.add("dark");
+  }
+  localStorage.setItem("brain-theme", t);
+}
 
 export default function SettingsModal({ onClose }: Props) {
-  const [settings, setSettings] = useState<Settings | null>(null);
-  const [provider, setProvider] = useState("anthropic");
-  const [anthropicKey, setAnthropicKey] = useState("");
-  const [openaiKey, setOpenaiKey] = useState("");
-  const [anthropicModel, setAnthropicModel] = useState("claude-opus-4-6");
-  const [openaiModel, setOpenaiModel] = useState("gpt-4o");
-  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
-  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const canManageSecrets = isAdmin(getStoredUser());
+  const tabOptions: Array<"general" | "secrets"> = canManageSecrets ? ["general", "secrets"] : ["general"];
+  const [tab, setTab]       = useState<"general" | "secrets">("general");
+  const [theme, setTheme]   = useState("dark");
+  const [secrets, setSecrets] = useState<SecretKey[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newVal, setNewVal]   = useState("");
+  const [showNew, setShowNew] = useState(false);
 
   useEffect(() => {
-    fetch(`${BASE}/settings/`)
-      .then((r) => r.json())
-      .then((s: Settings) => {
-        setSettings(s);
-        setProvider(s.provider);
-        setAnthropicModel(s.anthropic_model);
-        setOpenaiModel(s.openai_model);
-      })
-      .catch(() => {});
-  }, []);
+    setTheme(localStorage.getItem("brain-theme") || "dark");
+    if (canManageSecrets) {
+      fetch(`${BASE}/settings/secrets`, { headers: withAuthHeaders() }).then(r => r.json()).then(setSecrets).catch(() => setSecrets([]));
+    } else {
+      setTab("general");
+      setSecrets([]);
+    }
+  }, [canManageSecrets]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    const body: Record<string, string> = {
-      provider,
-      anthropic_model: anthropicModel,
-      openai_model: openaiModel,
-    };
-    if (anthropicKey) body.anthropic_api_key = anthropicKey;
-    if (openaiKey)    body.openai_api_key    = openaiKey;
+  const saveTheme = (t: string) => { setTheme(t); applyTheme(t); };
 
-    await fetch(`${BASE}/settings/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+  const addSecret = async () => {
+    if (!newName.trim() || !newVal.trim()) return;
+    const res = await fetch(`${BASE}/settings/secrets`, {
+      method: "POST", headers: withAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ name: newName.trim(), value: newVal.trim() }),
+    }).then(r => r.json()).catch(() => null);
+    if (res) {
+      setSecrets(prev => [res, ...prev.filter(s => s.id !== res.id)]);
+      setNewName("");
+      setNewVal("");
+      setShowNew(false);
+    }
+  };
 
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => { setSaved(false); onClose(); }, 1000);
+  const deleteSecret = async (id: string) => {
+    await fetch(`${BASE}/settings/secrets/${id}`, { method: "DELETE", headers: withAuthHeaders() });
+    setSecrets(prev => prev.filter(s => s.id !== id));
+  };
+
+  const inpStyle = {
+    background: "var(--bg)",
+    border: "1px solid var(--border)",
+    color: "var(--text)",
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="bg-[#12141f] border border-[#1e2235] rounded-2xl w-full max-w-md shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e2235]">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <Zap size={12} className="text-white" />
-            </div>
-            <h2 className="text-sm font-semibold text-[#e8eaf0]">AI Provider Settings</h2>
-          </div>
-          <button onClick={onClose} className="text-[#3e4357] hover:text-[#8b90a8] transition-colors">
-            <X size={16} />
-          </button>
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-panel rounded-2xl w-full max-w-md shadow-2xl"
+        style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Settings</h2>
+          <button onClick={onClose} style={{ color: "var(--text-dim)" }} className="hover:opacity-70"><X size={16} /></button>
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* Provider selector */}
-          <div>
-            <label className="block text-xs font-medium text-[#8b90a8] mb-2">AI Provider</label>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: "anthropic", name: "Anthropic", tag: "Claude" },
-                { id: "openai",    name: "OpenAI",    tag: "GPT-4" },
-              ].map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setProvider(p.id)}
-                  className={`flex flex-col items-start gap-1 p-3 rounded-xl border-2 transition-all text-left
-                    ${provider === p.id
-                      ? "border-violet-500 bg-violet-500/10"
-                      : "border-[#1e2235] bg-[#0d0f1a] hover:border-[#2e3347]"}`}
-                >
-                  <span className="text-sm font-medium text-[#e8eaf0]">{p.name}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium
-                    ${p.id === "anthropic" ? "bg-violet-500/20 text-violet-400" : "bg-green-500/20 text-green-400"}`}>
-                    {p.tag}
-                  </span>
+        {/* Tabs */}
+        <div className="flex gap-1 mx-6 mt-4 rounded-lg p-1" style={{ background: "var(--bg)" }}>
+          {tabOptions.map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className="flex-1 py-1.5 rounded-md text-xs font-medium transition-colors capitalize"
+              style={tab === t
+                ? { background: "var(--surface)", color: "var(--text)" }
+                : { color: "var(--text-muted)" }}>
+              {t === "secrets" ? "Secret keys" : "General"}
+            </button>
+          ))}
+        </div>
+
+        <div className="p-6 space-y-4">
+          {tab === "general" && (
+            <>
+              <div>
+                <label className="block text-xs font-medium mb-3" style={{ color: "var(--text-muted)" }}>Theme</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([["dark", Moon, "Dark"], ["light", Sun, "Light"], ["system", Monitor, "System"]] as const).map(([id, Icon, label]) => (
+                    <button key={id} onClick={() => saveTheme(id)}
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all"
+                      style={{
+                        border: theme === id ? "2px solid #00c896" : "2px solid var(--border)",
+                        background: theme === id ? "rgba(0,200,150,0.1)" : "var(--bg)",
+                      }}>
+                      <Icon size={18} style={{ color: theme === id ? "#33d9ab" : "var(--text-dim)" }} />
+                      <span className="text-xs" style={{ color: "var(--text)" }}>{label}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] mt-2 text-center" style={{ color: "var(--text-dim)" }}>
+                  Theme applies immediately ↑
+                </p>
+              </div>
+              <div className="rounded-xl p-4 space-y-2" style={{ background: "var(--bg)", border: "1px solid var(--border)" }}>
+                {[["Version", "brAIn v3.0"], ["Backend", "● Running"], ["Database", "SQLite (local)"]].map(([k, v]) => (
+                  <div key={k} className="flex justify-between text-xs">
+                    <span style={{ color: "var(--text-dim)" }}>{k}</span>
+                    <span className="font-mono" style={{ color: v.includes("●") ? "#22c55e" : "var(--text-muted)" }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {tab === "secrets" && (
+            <>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Store named secrets to reference in your analysis. Secret values are write-only and are not shown again after saving.
+              </p>
+              <div className="space-y-2 max-h-52 overflow-y-auto">
+                {secrets.length === 0 && (
+                  <p className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>No secrets stored yet</p>
+                )}
+                {secrets.map(s => (
+                  <div key={s.id} className="flex items-center gap-2 rounded-lg px-3 py-2"
+                    style={{ background: "var(--bg)", border: "1px solid var(--border)" }}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium font-mono" style={{ color: "var(--text)" }}>{s.name}</p>
+                      <p className="text-[10px] font-mono mt-0.5" style={{ color: "var(--text-dim)" }}>
+                        Stored securely
+                      </p>
+                    </div>
+                    <button onClick={() => deleteSecret(s.id)} className="p-1 hover:text-red-400" style={{ color: "var(--text-dim)" }}><Trash2 size={12} /></button>
+                  </div>
+                ))}
+              </div>
+              {showNew ? (
+                <div className="space-y-2 rounded-xl p-3" style={{ background: "var(--bg)", border: "1px solid #00c89666" }}>
+                  <input className={inp} style={inpStyle} placeholder="Key name e.g. DB_PASSWORD" value={newName} onChange={e => setNewName(e.target.value)} />
+                  <input className={inp} style={inpStyle} type="password" placeholder="Secret value" value={newVal}
+                    onChange={e => setNewVal(e.target.value)} onKeyDown={e => e.key === "Enter" && addSecret()} />
+                  <div className="flex gap-2">
+                    <button onClick={() => { setShowNew(false); setNewName(""); setNewVal(""); }}
+                      className="flex-1 py-1.5 rounded-lg text-xs" style={{ border: "1px solid var(--border)", color: "var(--text-muted)" }}>Cancel</button>
+                    <button onClick={addSecret} disabled={!newName || !newVal}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-40"
+                      style={{ background: "#00c896" }}>Save secret</button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setShowNew(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs transition-colors"
+                  style={{ border: "1px dashed var(--border)", color: "var(--text-dim)" }}>
+                  <Plus size={12} /> Add secret key
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Anthropic section */}
-          {provider === "anthropic" && (
-            <>
-              <div>
-                <label className="block text-xs font-medium text-[#8b90a8] mb-1.5">
-                  Anthropic API Key
-                  {settings?.has_anthropic_key && (
-                    <span className="ml-2 text-green-400 text-[10px]">✓ key saved</span>
-                  )}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showAnthropicKey ? "text" : "password"}
-                    className={inputClass + " pr-9"}
-                    placeholder={settings?.has_anthropic_key ? "Leave blank to keep existing key" : "sk-ant-..."}
-                    value={anthropicKey}
-                    onChange={(e) => setAnthropicKey(e.target.value)}
-                  />
-                  <button
-                    onClick={() => setShowAnthropicKey((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3e4357] hover:text-[#8b90a8]"
-                  >
-                    {showAnthropicKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                </div>
-                <p className="text-[10px] text-[#3e4357] mt-1">
-                  Get your key at{" "}
-                  <a href="https://console.anthropic.com" target="_blank" className="text-violet-400 hover:underline">
-                    console.anthropic.com
-                  </a>
-                </p>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-[#8b90a8] mb-1.5">Model</label>
-                <select
-                  className={inputClass}
-                  value={anthropicModel}
-                  onChange={(e) => setAnthropicModel(e.target.value)}
-                >
-                  {ANTHROPIC_MODELS.map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </select>
-              </div>
+              )}
             </>
           )}
-
-          {/* OpenAI section */}
-          {provider === "openai" && (
-            <>
-              <div>
-                <label className="block text-xs font-medium text-[#8b90a8] mb-1.5">
-                  OpenAI API Key
-                  {settings?.has_openai_key && (
-                    <span className="ml-2 text-green-400 text-[10px]">✓ key saved</span>
-                  )}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showOpenaiKey ? "text" : "password"}
-                    className={inputClass + " pr-9"}
-                    placeholder={settings?.has_openai_key ? "Leave blank to keep existing key" : "sk-..."}
-                    value={openaiKey}
-                    onChange={(e) => setOpenaiKey(e.target.value)}
-                  />
-                  <button
-                    onClick={() => setShowOpenaiKey((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3e4357] hover:text-[#8b90a8]"
-                  >
-                    {showOpenaiKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                </div>
-                <p className="text-[10px] text-[#3e4357] mt-1">
-                  Get your key at{" "}
-                  <a href="https://platform.openai.com/api-keys" target="_blank" className="text-green-400 hover:underline">
-                    platform.openai.com
-                  </a>
-                </p>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-[#8b90a8] mb-1.5">Model</label>
-                <select
-                  className={inputClass}
-                  value={openaiModel}
-                  onChange={(e) => setOpenaiModel(e.target.value)}
-                >
-                  {OPENAI_MODELS.map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
-
-          {/* Save */}
-          <button
-            onClick={handleSave}
-            disabled={saving || saved}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white text-sm font-medium transition-colors"
-          >
-            {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <CheckCircle2 size={14} /> : null}
-            {saving ? "Saving…" : saved ? "Saved!" : "Save settings"}
-          </button>
         </div>
       </div>
     </div>
