@@ -5,9 +5,10 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from db import get_db, Dataset, Conversation, Message
+from db import get_db, Dataset, Conversation, Message, User
 from services.ai_service import stream_chat
 from routers.settings import load_chat_settings
+from routers.auth import require_brain_access
 
 router = APIRouter()
 
@@ -28,7 +29,7 @@ def _dataset_dict(d: Dataset) -> dict:
 
 
 @router.get("/conversations")
-def list_conversations(dataset_id: str, db: Session = Depends(get_db)):
+def list_conversations(dataset_id: str, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
     convs = (
         db.query(Conversation)
         .filter(Conversation.dataset_id == dataset_id)
@@ -39,7 +40,7 @@ def list_conversations(dataset_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/conversations")
-def create_conversation(dataset_id: str, db: Session = Depends(get_db)):
+def create_conversation(dataset_id: str, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
     dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
@@ -50,7 +51,7 @@ def create_conversation(dataset_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/conversations/{conversation_id}/messages")
-def get_messages(conversation_id: str, db: Session = Depends(get_db)):
+def get_messages(conversation_id: str, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
     msgs = (
         db.query(Message)
         .filter(Message.conversation_id == conversation_id)
@@ -74,10 +75,32 @@ def get_messages(conversation_id: str, db: Session = Depends(get_db)):
 class ChatRequest(BaseModel):
     conversation_id: str
     message: str
+    extra_dataset_ids: list[str] = []
 
+
+
+@router.delete("/conversations/{conversation_id}")
+def delete_conversation(conversation_id: str, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.query(Message).filter(Message.conversation_id == conversation_id).delete()
+    db.delete(conv)
+    db.commit()
+    return {"ok": True}
+
+
+@router.patch("/conversations/{conversation_id}/title")
+def update_conversation_title(conversation_id: str, body: dict, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Not found")
+    conv.title = body.get("title", conv.title)[:80]
+    db.commit()
+    return {"id": conv.id, "title": conv.title}
 
 @router.post("/stream")
-def chat_stream(req: ChatRequest, db: Session = Depends(get_db)):
+def chat_stream(req: ChatRequest, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
     conv = db.query(Conversation).filter(Conversation.id == req.conversation_id).first()
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -87,7 +110,12 @@ def chat_stream(req: ChatRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Dataset not found")
 
     # ── Convert to plain dict NOW before DB session closes ────────────────────
-    dataset_data = _dataset_dict(dataset)
+    dataset_data   = _dataset_dict(dataset)
+    extra_datasets = []
+    for eid in req.extra_dataset_ids:
+        ed = db.query(Dataset).filter(Dataset.id == eid).first()
+        if ed:
+            extra_datasets.append(_dataset_dict(ed))
     ai_settings  = load_chat_settings(db)
     conv_id      = str(conv.id)
     conv_title   = str(conv.title) if conv.title else ""
@@ -114,8 +142,10 @@ def chat_stream(req: ChatRequest, db: Session = Depends(get_db)):
         role="user",
         content=req.message,
     ))
+    new_title = None
     if not past and not conv_title:
-        conv.title = req.message[:60] + ("..." if len(req.message) > 60 else "")
+        new_title  = req.message[:60] + ("…" if len(req.message) > 60 else "")
+        conv.title = new_title
     db.commit()
 
     # ── Streaming generator ───────────────────────────────────────────────────
@@ -126,13 +156,18 @@ def chat_stream(req: ChatRequest, db: Session = Depends(get_db)):
 
     def generate():
         try:
+            # Emit conversation title so frontend sidebar can update immediately
+            if new_title:
+                import json as _json
+                yield f"data: {_json.dumps({'type': 'conversation_title', 'title': new_title, 'conversation_id': conv_id})}\n\n"
             for raw in stream_chat(
-                dataset      = dataset_data,
-                history      = history,
-                user_message = req.message,
-                provider     = ai_settings["provider"],
-                api_key      = ai_settings["api_key"],
-                model        = ai_settings["model"],
+                dataset        = dataset_data,
+                history        = history,
+                user_message   = req.message,
+                provider       = ai_settings["provider"],
+                api_key        = ai_settings["api_key"],
+                model          = ai_settings["model"],
+                extra_datasets = extra_datasets,
             ):
                 yield raw
                 if raw.startswith("data: "):
@@ -183,3 +218,28 @@ def chat_stream(req: ChatRequest, db: Session = Depends(get_db)):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ── Run a single notebook cell ────────────────────────────────────────────────
+
+class RunCellRequest(BaseModel):
+    code:       str
+    dataset_id: str
+
+
+@router.post("/run-cell")
+def run_cell(req: RunCellRequest, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
+    from services.executor import execute_python
+
+    dataset = db.query(Dataset).filter(Dataset.id == req.dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    dataset_data = _dataset_dict(dataset)
+    result       = execute_python(req.code, dataset_data)
+    return {
+        "success": result["success"],
+        "output":  result["output"],
+        "error":   result.get("error"),
+        "charts":  result["charts"],
+    }
