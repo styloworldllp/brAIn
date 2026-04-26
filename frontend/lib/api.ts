@@ -39,6 +39,7 @@ export interface Dataset {
   all_tables?: string[];
   is_deleted?: boolean;
   deleted_at?: string;
+  has_access?: boolean;
 }
 
 export interface Conversation {

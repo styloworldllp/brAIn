@@ -272,18 +272,25 @@ export default function ChatInterface({ conversationId, dataset, onChartSaved, o
             </div>
             );
           })}
+        </div>
 
-          {/* + Add dataset button */}
-          <div className="relative" style={{ flexShrink: 0 }}>
-            <button onClick={() => setShowDatasetPicker(v => !v)}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors hover:opacity-80"
-              style={{ border: "1px dashed var(--border2)", color: "var(--text-muted)", whiteSpace: "nowrap" }}
-              title="Add another dataset to this conversation">
-              <Plus size={11} /> <span className="chat-add-label">Add dataset</span>
-            </button>
+        {/* + Add dataset button — kept outside overflow:hidden so it's always visible */}
+        <div className="relative" style={{ flexShrink: 0 }}>
+          <button onClick={() => setShowDatasetPicker(v => !v)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors hover:opacity-80"
+            style={{ border: "1px dashed var(--border2)", color: "var(--text-muted)", whiteSpace: "nowrap" }}
+            title="Add another dataset to this conversation">
+            <Plus size={11} /> <span className="chat-add-label">Add dataset</span>
+          </button>
 
-            {showDatasetPicker && (
-              <div className="absolute top-full left-0 mt-1 w-64 rounded-xl shadow-2xl z-50"
+          {showDatasetPicker && (() => {
+            const available = allDatasets.filter(d =>
+              d.id !== dataset.id &&
+              !extraDatasets.find(e => e.id === d.id) &&
+              d.has_access !== false
+            );
+            return (
+              <div className="absolute top-full right-0 mt-1 w-64 rounded-xl shadow-2xl z-50"
                 style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
                 <div className="px-3 py-2" style={{ borderBottom: "1px solid var(--border)" }}>
                   <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
@@ -291,7 +298,7 @@ export default function ChatInterface({ conversationId, dataset, onChartSaved, o
                   </p>
                 </div>
                 <div className="max-h-56 overflow-y-auto p-1.5 space-y-1">
-                  {allDatasets.filter(d => d.id !== dataset.id && !extraDatasets.find(e => e.id === d.id)).map(ds => {
+                  {available.map(ds => {
                     const color = ds.source_type === "mysql" ? "#fb923c" : ds.source_type === "postgres" ? "#60a5fa" : "#4ade80";
                     return (
                       <button key={ds.id}
@@ -309,13 +316,13 @@ export default function ChatInterface({ conversationId, dataset, onChartSaved, o
                       </button>
                     );
                   })}
-                  {allDatasets.filter(d => d.id !== dataset.id && !extraDatasets.find(e => e.id === d.id)).length === 0 && (
+                  {available.length === 0 && (
                     <p className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>No other datasets available</p>
                   )}
                 </div>
               </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
 
         {/* Right actions */}
@@ -400,7 +407,7 @@ export default function ChatInterface({ conversationId, dataset, onChartSaved, o
               const lastAssistantIdx = messages.map(m => m.role).lastIndexOf("assistant");
               const lastUserMsg = [...messages].reverse().find(m => m.role === "user")?.content ?? "";
               const peerOptions = allDatasets.filter(
-                d => d.id !== dataset.id && !extraDatasets.find(e => e.id === d.id)
+                d => d.id !== dataset.id && !extraDatasets.find(e => e.id === d.id) && d.has_access !== false
               );
               return messages.map((msg, idx) => {
                 const isLastAssistant = idx === lastAssistantIdx && !streaming && !isSending;

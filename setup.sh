@@ -83,8 +83,8 @@ else
 fi
 
 source venv/bin/activate
-pip install -q --upgrade pip
-pip install -q -r requirements.txt
+venv/bin/python -m pip install -q --upgrade pip
+venv/bin/python -m pip install -q -r requirements.txt
 echo -e "${GREEN}✓ All Python packages installed${NC}"
 
 # Remove stale database so new tables are created cleanly
