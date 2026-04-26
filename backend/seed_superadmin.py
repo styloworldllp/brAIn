@@ -1,21 +1,35 @@
 """
-Run once: python seed_superadmin.py
-Creates the Stylo super admin account.
+Run once to create the brAIn super admin account.
+
+Usage:
+  SUPER_ADMIN_EMAIL=admin@yourdomain.com \
+  SUPER_ADMIN_PASSWORD=YourSecurePassword123! \
+  python seed_superadmin.py
+
+Optional:
+  SUPER_ADMIN_USERNAME=superadmin  (defaults to "superadmin")
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
-from db import SessionLocal, Base, engine, User, Organization
+from db import SessionLocal, Base, engine, User
 from routers.auth import hash_password
-from datetime import datetime
 
 Base.metadata.create_all(bind=engine)
 
-db = SessionLocal()
+EMAIL    = os.environ.get("SUPER_ADMIN_EMAIL")
+USERNAME = os.environ.get("SUPER_ADMIN_USERNAME", "superadmin")
+PASSWORD = os.environ.get("SUPER_ADMIN_PASSWORD")
 
-EMAIL    = "superadmin@stylo.ai"
-USERNAME = "stylo_admin"
-PASSWORD = "Stylo@2024!"
+if not EMAIL or not PASSWORD:
+    print("ERROR: SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD must be set.")
+    print()
+    print("  export SUPER_ADMIN_EMAIL=admin@yourdomain.com")
+    print("  export SUPER_ADMIN_PASSWORD=YourSecurePassword123!")
+    print("  python seed_superadmin.py")
+    sys.exit(1)
+
+db = SessionLocal()
 
 existing = db.query(User).filter(User.email == EMAIL).first()
 if existing:
@@ -31,7 +45,7 @@ else:
     )
     db.add(user)
     db.commit()
-    print(f"✓ Created super admin: {EMAIL} / {PASSWORD}")
+    print(f"✓ Created super admin: {EMAIL}")
 
 db.close()
-print("Done. Navigate to http://localhost:3000/superadmin after login.")
+print("Done. Navigate to /superadmin after login.")

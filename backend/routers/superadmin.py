@@ -10,8 +10,8 @@ from typing import Optional
 import re, uuid
 from datetime import datetime
 
-from db import get_db, Organization, User, Dataset, Conversation, Message, SavedChart
-from routers.auth import require_super_admin, user_to_dict, hash_password
+from db import get_db, Organization, User, Dataset, Conversation, Message, SavedChart, Schedule
+from routers.auth import require_super_admin, require_staff_access, user_to_dict, hash_password
 
 router = APIRouter()
 
@@ -23,7 +23,7 @@ def slugify(name: str) -> str:
 
 def org_to_dict(org: Organization, db: Session) -> dict:
     user_count    = db.query(User).filter(User.organization_id == org.id).count()
-    dataset_count = db.query(Dataset).count()  # datasets are global for now
+    dataset_count = db.query(Dataset).filter(Dataset.organization_id == org.id).count()
     return {
         "id":            org.id,
         "name":          org.name,
@@ -92,7 +92,14 @@ def global_stats(db: Session = Depends(get_db), _: User = Depends(require_super_
 # ── Organizations ──────────────────────────────────────────────────────────────
 
 @router.get("/orgs")
-def list_orgs(db: Session = Depends(get_db), _: User = Depends(require_super_admin)):
+def list_orgs(db: Session = Depends(get_db), _: User = Depends(require_staff_access)):
+    orgs = db.query(Organization).order_by(Organization.created_at.desc()).all()
+    return [org_to_dict(o, db) for o in orgs]
+
+
+@router.get("/organizations")
+def list_orgs_alias(db: Session = Depends(get_db), _: User = Depends(require_staff_access)):
+    """Alias used by the staff page frontend."""
     orgs = db.query(Organization).order_by(Organization.created_at.desc()).all()
     return [org_to_dict(o, db) for o in orgs]
 
@@ -135,7 +142,16 @@ def delete_org(org_id: str, db: Session = Depends(get_db), _: User = Depends(req
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(404, "Organization not found")
-    # Remove org association from users rather than deleting them
+    # Stop APScheduler jobs for all active schedules in this org
+    from routers.schedules import _remove_job
+    active_schedules = db.query(Schedule).filter(Schedule.organization_id == org_id).all()
+    for s in active_schedules:
+        _remove_job(s.id)
+    # Orphan/remove all org-scoped data rather than hard-deleting users
+    db.query(Schedule).filter(Schedule.organization_id == org_id).delete()
+    db.query(SavedChart).filter(SavedChart.organization_id == org_id).delete()
+    db.query(Conversation).filter(Conversation.organization_id == org_id).update({"organization_id": None})
+    db.query(Dataset).filter(Dataset.organization_id == org_id).update({"organization_id": None})
     db.query(User).filter(User.organization_id == org_id).update({"organization_id": None})
     db.delete(org); db.commit()
     return {"ok": True}
@@ -169,14 +185,29 @@ def create_org_user(org_id: str, body: CreateOrgUserBody, db: Session = Depends(
     return user_to_dict(user)
 
 
+class MoveUserBody(BaseModel):
+    org_id: Optional[str] = None
+
+
 @router.patch("/users/{user_id}/org")
-def move_user_to_org(user_id: str, org_id: Optional[str], db: Session = Depends(get_db), _: User = Depends(require_super_admin)):
+def move_user_to_org(user_id: str, body: MoveUserBody, db: Session = Depends(get_db), _: User = Depends(require_super_admin)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(404, "User not found")
     if user.role == "super_admin":
-        raise HTTPException(400, "Super admin users cannot be assigned to a customer")
-    user.organization_id = org_id
+        raise HTTPException(400, "Super admin users cannot be assigned to a customer org")
+    if body.org_id:
+        org = db.query(Organization).filter(Organization.id == body.org_id).first()
+        if not org:
+            raise HTTPException(404, "Organization not found")
+    old_org_id = user.organization_id
+    user.organization_id = body.org_id
+    # Reassign datasets that belong to the user's old org to the new org
+    if old_org_id:
+        db.query(Dataset).filter(
+            Dataset.organization_id == old_org_id,
+            Dataset.uploaded_by == user_id,
+        ).update({"organization_id": body.org_id})
     db.commit()
     return user_to_dict(user)
 

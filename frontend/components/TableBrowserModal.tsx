@@ -4,7 +4,7 @@ import { AISpinner } from "./AISpinner";
 import { X, Search, Database, ChevronRight, ChevronDown, Shield, ShieldAlert, ShieldCheck, Eye, EyeOff, Check, AlertTriangle, Info } from "lucide-react";
 import { withAuthHeaders } from "@/lib/auth";
 
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
 interface ColumnInfo {
   dtype: string;
@@ -134,14 +134,14 @@ export default function TableBrowserModal({ connStr, dbType, connName, tables, o
   };
 
   return (
-    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+    <div className="modal-backdrop" style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-panel rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]"
-        style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+      <div className="modal-panel"
+        style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 16, width: "100%", maxWidth: 672, display: "flex", flexDirection: "column", maxHeight: "90vh", boxShadow: "0 25px 50px rgba(0,0,0,0.35)" }}>
 
         {/* Header */}
         <div className="shrink-0 flex items-center gap-3 px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
-          <Database size={16} style={{ color: "#00c896" }} />
+          <Database size={16} style={{ color: "var(--accent)" }} />
           <div className="flex-1">
             <h2 className="text-sm font-semibold" style={{ color: "var(--text)" }}>{connName}</h2>
             <p className="text-[10px]" style={{ color: "var(--text-dim)" }}>{tables.length} tables available · {selectedTables.size} selected</p>
@@ -198,7 +198,7 @@ export default function TableBrowserModal({ connStr, dbType, connName, tables, o
             )}
             <button onClick={handleSave} disabled={saving || selectedTables.size === 0}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-40 transition-colors hover:opacity-90"
-              style={{ background: "linear-gradient(135deg,#00c896,#059669)" }}>
+              style={{ background: "linear-gradient(135deg,var(--accent),var(--accent2))" }}>
               {saving ? <AISpinner size={14} /> : <Check size={14} />}
               {saving ? "Connecting…" : "Connect & start chatting"}
             </button>
@@ -234,7 +234,7 @@ function TableStep({ tables, allTables, selected, search, onSearch, schemas, loa
         <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
           {tables.length} table{tables.length !== 1 ? "s" : ""}
         </p>
-        <button onClick={onSelectAll} className="text-[10px] hover:opacity-70 transition-opacity" style={{ color: "#33d9ab" }}>
+        <button onClick={onSelectAll} className="text-[10px] hover:opacity-70 transition-opacity" style={{ color: "var(--accent-light)" }}>
           Select all
         </button>
       </div>
@@ -250,13 +250,13 @@ function TableStep({ tables, allTables, selected, search, onSearch, schemas, loa
           const excl       = excludedCols[table];
 
           return (
-            <div key={table} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${isSelected ? "rgba(0,200,150,0.4)" : "var(--border)"}` }}>
+            <div key={table} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${isSelected ? "var(--border-accent)" : "var(--border)"}` }}>
               {/* Row */}
-              <div className="flex items-center gap-3 px-4 py-3" style={{ background: isSelected ? "rgba(0,200,150,0.06)" : "var(--bg)" }}>
+              <div className="flex items-center gap-3 px-4 py-3" style={{ background: isSelected ? "var(--accent-dim)" : "var(--bg)" }}>
                 {/* Checkbox */}
                 <button onClick={() => onToggle(table)}
                   className="shrink-0 w-4 h-4 rounded flex items-center justify-center transition-colors"
-                  style={{ background: isSelected ? "#00c896" : "var(--surface)", border: `1.5px solid ${isSelected ? "#00c896" : "var(--border2)"}` }}>
+                  style={{ background: isSelected ? "var(--accent)" : "var(--surface)", border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--border2)"}` }}>
                   {isSelected && <Check size={10} className="text-white" />}
                 </button>
 
@@ -375,7 +375,7 @@ function PIIStep({ selected, schemas, excludedCols, onToggleCol, loadingTable, o
           <div key={table} className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             {/* Table header */}
             <div className="flex items-center gap-2 px-4 py-3" style={{ background: "var(--bg)", borderBottom: "1px solid var(--border)" }}>
-              <Database size={13} style={{ color: "#00c896" }} />
+              <Database size={13} style={{ color: "var(--accent)" }} />
               <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>{table}</span>
               <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>{schema.row_count?.toLocaleString()} rows</span>
               {piiCols.length > 0 && (

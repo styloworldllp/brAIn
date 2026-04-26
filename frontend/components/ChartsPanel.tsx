@@ -9,7 +9,7 @@ const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 interface SavedChart { id: string; title: string; dataset_id: string; chart_json: unknown; created_at: string; }
 interface Props { refreshTrigger: number; }
 
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
 export default function ChartsPanel({ refreshTrigger }: Props) {
   const [charts, setCharts]       = useState<SavedChart[]>([]);
@@ -17,7 +17,7 @@ export default function ChartsPanel({ refreshTrigger }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
 
-  const load = () => fetch(`${BASE}/charts/`, { headers: withAuthHeaders() }).then(r => r.json()).then(setCharts).catch(() => {});
+  const load = () => fetch(`${BASE}/charts/`, { headers: withAuthHeaders() }).then(r => r.json()).then(setCharts).catch(e => console.error("Failed to load charts:", e));
   useEffect(() => { load(); }, [refreshTrigger]);
 
   const del = async (id: string, e: React.MouseEvent) => {
@@ -102,15 +102,15 @@ export default function ChartsPanel({ refreshTrigger }: Props) {
               <div key={c.id} onClick={() => setSelected(c)}
                 className="group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors"
                 style={{ background: "var(--bg)", border: "1px solid var(--border)" }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(0,200,150,0.4)")}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--border-accent)")}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}>
-                <BarChart2 size={12} style={{ color: "#00c896", flexShrink: 0 }} />
+                <BarChart2 size={12} style={{ color: "var(--accent)", flexShrink: 0 }} />
                 <div className="flex-1 min-w-0">
                   {editingId === c.id ? (
                     <div onClick={e => e.stopPropagation()} className="flex items-center gap-1">
                       <input autoFocus
                         className="flex-1 rounded px-1.5 py-0.5 text-[11px] outline-none min-w-0"
-                        style={{ background: "var(--bg)", border: "1px solid #00c89666", color: "var(--text)" }}
+                        style={{ background: "var(--bg)", border: "1px solid var(--border-accent)", color: "var(--text)" }}
                         value={editTitle} onChange={e => setEditTitle(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter") saveEdit(c.id); if (e.key === "Escape") setEditingId(null); }}
                       />

@@ -5,7 +5,7 @@ import { AISpinner } from "./AISpinner";
 import { Dataset } from "@/lib/api";
 import { withAuthHeaders } from "@/lib/auth";
 
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
 interface PIIInfo {
   is_pii: boolean;
@@ -41,7 +41,7 @@ export default function PIIReviewModal({ dataset, onClose, onSave }: Props) {
         if (info.severity === "high") autoExcl.add(col);
       });
       setExcluded(autoExcl);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(e => console.error("Failed to load PII results:", e)).finally(() => setLoading(false));
   }, [dataset]);
 
   const toggle = (col: string) => {
@@ -57,10 +57,10 @@ export default function PIIReviewModal({ dataset, onClose, onSave }: Props) {
   const totalPii   = piiCols.length;
 
   return (
-    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+    <div className="modal-backdrop" style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-panel rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh]"
-        style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+      <div className="modal-panel"
+        style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 16, width: "100%", maxWidth: 512, display: "flex", flexDirection: "column", maxHeight: "85vh", boxShadow: "0 25px 50px rgba(0,0,0,0.35)" }}>
 
         <div className="shrink-0 flex items-center gap-3 px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
           <Shield size={16} style={{ color: "#f59e0b" }} />
@@ -151,7 +151,7 @@ export default function PIIReviewModal({ dataset, onClose, onSave }: Props) {
           </p>
           <button onClick={() => onSave(Array.from(excluded))} disabled={loading}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-40 hover:opacity-90"
-            style={{ background: "linear-gradient(135deg,#00c896,#059669)" }}>
+            style={{ background: "linear-gradient(135deg,var(--accent),var(--accent2))" }}>
             <Check size={14} /> Save & continue
           </button>
         </div>

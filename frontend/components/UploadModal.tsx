@@ -6,7 +6,7 @@ import { Upload, X, Shield, Eye, EyeOff, Check } from "lucide-react";
 import { uploadFile, Dataset } from "@/lib/api";
 import { withAuthHeaders } from "@/lib/auth";
 
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 interface Props { onClose: () => void; onSuccess: (dataset: Dataset) => void; }
 
 type Screen = "upload" | "pii";
@@ -74,7 +74,7 @@ export default function UploadModal({ onClose, onSuccess }: Props) {
       method: "POST",
       headers: withAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ excluded_columns: Array.from(excluded) }),
-    }).catch(() => {});
+    }).catch(e => console.error("Failed to save PII config:", e));
     onSuccess(uploadedDataset);
     onClose();
   };
@@ -83,10 +83,10 @@ export default function UploadModal({ onClose, onSuccess }: Props) {
   const normalCols = Object.entries(piiResults).filter(([, v]) => !v.is_pii);
 
   return (
-    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+    <div className="modal-backdrop" style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-panel rounded-2xl w-full max-w-md shadow-2xl"
-        style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+      <div className="modal-panel"
+        style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 16, width: "100%", maxWidth: 448, boxShadow: "0 25px 50px rgba(0,0,0,0.35)" }}>
 
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2">
@@ -106,8 +106,8 @@ export default function UploadModal({ onClose, onSuccess }: Props) {
             <div {...getRootProps()}
               className="border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors"
               style={{
-                borderColor: isDragActive ? "#00c896" : "var(--border2)",
-                background: isDragActive ? "rgba(0,200,150,0.05)" : "transparent",
+                borderColor: isDragActive ? "var(--accent)" : "var(--border2)",
+                background: isDragActive ? "var(--accent-dim)" : "transparent",
                 opacity: uploading ? 0.5 : 1,
                 pointerEvents: uploading ? "none" : "auto",
               }}>
@@ -119,8 +119,8 @@ export default function UploadModal({ onClose, onSuccess }: Props) {
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(0,200,150,0.1)" }}>
-                    <Upload size={22} style={{ color: "#00c896" }} />
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "var(--accent-dim)" }}>
+                    <Upload size={22} style={{ color: "var(--accent)" }} />
                   </div>
                   <div>
                     <p className="text-sm font-medium" style={{ color: "var(--text)" }}>
@@ -219,7 +219,7 @@ export default function UploadModal({ onClose, onSuccess }: Props) {
               </p>
               <button onClick={handleSave}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white hover:opacity-90"
-                style={{ background: "linear-gradient(135deg,#00c896,#059669)" }}>
+                style={{ background: "linear-gradient(135deg,var(--accent),var(--accent2))" }}>
                 <Check size={14} /> Continue
               </button>
             </div>

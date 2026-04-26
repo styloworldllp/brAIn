@@ -1,4 +1,4 @@
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
 function authHeaders(extra?: Record<string, string>): Record<string, string> {
   const token = typeof window !== "undefined" ? localStorage.getItem("brain_token") : null;
@@ -37,6 +37,8 @@ export interface Dataset {
   sample_data: Record<string, unknown>[];
   created_at: string;
   all_tables?: string[];
+  is_deleted?: boolean;
+  deleted_at?: string;
 }
 
 export interface Conversation {
@@ -52,6 +54,7 @@ export interface Message {
   executed_code?: string;
   code_output?: string;
   charts?: unknown[];
+  follow_up_questions?: string[];
   created_at: string;
 }
 
@@ -97,6 +100,9 @@ export const connectSheets = (payload: Record<string, unknown>): Promise<Dataset
 
 export const deleteDataset = (id: string) =>
   authedFetch(`${BASE}/datasets/${id}`, { method: "DELETE" }).then((r) => r.json());
+
+export const fetchArchivedDatasets = (): Promise<Dataset[]> =>
+  authedFetch(`${BASE}/datasets/archived`).then((r) => r.json());
 
 // Conversations
 export const fetchConversations = (dataset_id: string): Promise<Conversation[]> =>
@@ -154,6 +160,17 @@ export interface AISettings {
   has_anthropic_key: boolean;
   has_openai_key: boolean;
 }
+
+export interface NeurixStatus {
+  has_instance: boolean;
+  endpoint_url: string | null;
+  model_name: string | null;
+  neuron_balance: number;
+  cost_per_query: number;
+}
+
+export const fetchNeurixStatus = (): Promise<NeurixStatus> =>
+  authedFetch(`${BASE}/neurix/my-status`).then((r) => r.json());
 
 export const fetchSettings = (): Promise<AISettings> =>
   authedFetch(`${BASE}/settings/`).then((r) => r.json());

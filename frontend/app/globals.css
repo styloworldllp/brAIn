@@ -1,87 +1,153 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* Tailwind v4 */
+@import "tailwindcss";
 
 /* ═══════════════════════════════════════════════
    brAIn Design System — CSS Variables
-   All colors pass WCAG AA contrast (4.5:1 min)
    ═══════════════════════════════════════════════ */
 
-/* ── Dark theme (Stylo Green) ────────────────── */
+/* ── Dark — neutral charcoal (70% neutral · 20% brand · 10% accent) ── */
 :root, html, html.dark {
-  /* Backgrounds */
-  --bg:           #080d0b;   /* page bg */
-  --surface:      #0e1713;   /* cards, bubbles */
-  --surface2:     #0a1210;   /* sidebar, panels */
-  --surface3:     #121e19;   /* hover, inputs */
+  /* Surfaces — pure neutral, no green tint */
+  --bg:           #0d0d0f;
+  --surface:      #141416;
+  --surface2:     #111113;
+  --surface3:     #1c1c1f;
+  --surface4:     #242428;
 
-  /* Borders */
-  --border:       #1a2e24;
-  --border2:      #1f3a2d;
+  /* Borders — neutral */
+  --border:        #242428;
+  --border2:       #2e2e34;
+  --border-accent: rgba(0,200,150,0.22);
 
-  /* Text */
-  --text:         #e8f5ef;
-  --text-muted:   #7db898;
-  --text-dim:     #3a6b52;
+  /* Text — clean white hierarchy */
+  --text:         #f0f0f2;
+  --text-muted:   #8a8a94;
+  --text-dim:     #4e4e58;
   --text-on-accent: #ffffff;
 
-  /* Accent — Stylo teal-green */
-  --accent:       #00c896;
-  --accent-light: #33d9ab;
-  --accent-dim:   rgba(0,200,150,0.15);
+  /* Brand accent — green used sparingly */
+  --accent:        #00c896;
+  --accent-light:  #2dd9a8;
+  --accent-dim:    rgba(0,200,150,0.09);
+  --accent-glow:   rgba(0,200,150,0.18);
+  --accent2:       #059669;
+  --accent2-light: #10b981;
+  --accent2-dim:   rgba(5,150,105,0.07);
 
-  /* Semantic */
-  --green:        #34d399;
-  --red:          #f87171;
-  --amber:        #fbbf24;
-  --blue:         #60a5fa;
+  --green:   #34d399;
+  --red:     #f87171;
+  --amber:   #fbbf24;
+  --blue:    #60a5fa;
 
-  /* Component-specific */
-  --bubble-ai-bg:     #0e1713;
-  --bubble-ai-border: #1a2e24;
-  --bubble-ai-accent: #00c896;
   --bubble-user-from: #00c896;
   --bubble-user-to:   #059669;
-  --code-bg:          #040a07;
-  --code-text:        #6ee7b7;
-  --table-head-bg:    rgba(0,200,150,0.12);
-  --table-row-alt:    rgba(0,200,150,0.04);
-  --number-color:     #34d399;
-  --output-bg:        #080d0b;
-  --output-text:      #e8f5ef;
+  --bubble-ai-bg:     #141416;
+  --bubble-ai-border: #242428;
+
+  --code-bg:       #0d0d0f;
+  --code-text:     #a8ffdf;
+  --table-head-bg: #1c1c1f;
+  --table-row-alt: #141416;
+  --number-color:  #2dd9a8;
+  --output-bg:     #0d0d0f;
+  --output-text:   #f0f0f2;
 }
 
-/* ── Light theme (Stylo Green) ───────────────── */
-html.light {
-  --bg:           #f0faf5;
-  --surface:      #ffffff;
-  --surface2:     #f5fbf8;
-  --surface3:     #edf7f2;
-  --border:       #c8e6d4;
-  --border2:      #b0d9c0;
-  --text:         #0d2318;
-  --text-muted:   #3d6b52;
-  --text-dim:     #7aad90;
+/* ── Stylo Green — deep emerald night (clearly distinct from dark) ── */
+html.stylogreen {
+  /* Surfaces — rich green-tinted dark */
+  --bg:           #060d09;
+  --surface:      #0c1812;
+  --surface2:     #08110b;
+  --surface3:     #122018;
+  --surface4:     #1a2e22;
+
+  /* Borders — green-tinted */
+  --border:        rgba(0,200,150,0.14);
+  --border2:       rgba(0,200,150,0.24);
+  --border-accent: rgba(0,200,150,0.42);
+
+  /* Text — green-warm white hierarchy */
+  --text:         #e2f8ef;
+  --text-muted:   #5aba92;
+  --text-dim:     #2a6649;
   --text-on-accent: #ffffff;
-  --accent:       #009973;
-  --accent-light: #007a5a;
-  --accent-dim:   rgba(0,153,115,0.08);
-  --green:        #047857;
-  --red:          #b91c1c;
-  --amber:        #b45309;
-  --blue:         #1d4ed8;
-  --bubble-ai-bg:     #ffffff;
-  --bubble-ai-border: #c8e6d4;
-  --bubble-ai-accent: #009973;
+
+  --accent:        #00c896;
+  --accent-light:  #34d399;
+  --accent-dim:    rgba(0,200,150,0.14);
+  --accent-glow:   rgba(0,200,150,0.30);
+  --accent2:       #059669;
+  --accent2-light: #10b981;
+  --accent2-dim:   rgba(5,150,105,0.12);
+
+  --green:   #22c55e;
+  --red:     #f87171;
+  --amber:   #fbbf24;
+  --blue:    #60a5fa;
+
   --bubble-user-from: #00c896;
   --bubble-user-to:   #059669;
-  --code-bg:          #0d2318;
-  --code-text:        #6ee7b7;
-  --table-head-bg:    rgba(0,153,115,0.08);
-  --table-row-alt:    rgba(0,153,115,0.03);
-  --number-color:     #047857;
-  --output-bg:        #0d2318;
-  --output-text:      #e8f5ef;
+  --bubble-ai-bg:     #0c1812;
+  --bubble-ai-border: rgba(0,200,150,0.16);
+
+  --code-bg:       #040c07;
+  --code-text:     #6ee7b7;
+  --table-head-bg: rgba(0,200,150,0.09);
+  --table-row-alt: rgba(0,200,150,0.04);
+  --number-color:  #34d399;
+  --output-bg:     #060d09;
+  --output-text:   #e2f8ef;
+}
+
+/* ── Light — clean neutral whites (70% neutral · 20% brand · 10% accent) ── */
+html.light {
+  /* Surfaces — pure neutral, no green tint */
+  --bg:           #f8f8fa;
+  --surface:      #ffffff;
+  --surface2:     #f3f3f6;
+  --surface3:     #ebebee;
+  --surface4:     #e0e0e4;
+
+  /* Borders — neutral gray */
+  --border:        #e2e2e8;
+  --border2:       #d0d0d8;
+  --border-accent: rgba(0,168,118,0.28);
+
+  /* Text — near-black hierarchy */
+  --text:         #18181b;
+  --text-muted:   #62626c;
+  --text-dim:     #9898a4;
+  --text-on-accent: #ffffff;
+
+  --accent:        #00a876;
+  --accent-light:  #008f62;
+  --accent-dim:    rgba(0,168,118,0.08);
+  --accent-glow:   rgba(0,168,118,0.16);
+  --accent2:       #047857;
+  --accent2-light: #059669;
+  --accent2-dim:   rgba(4,120,87,0.06);
+
+  --green:   #059669;
+  --red:     #dc2626;
+  --amber:   #d97706;
+  --blue:    #2563eb;
+
+  --bubble-user-from: #00a876;
+  --bubble-user-to:   #047857;
+  --bubble-ai-bg:     #ffffff;
+  --bubble-ai-border: #e2e2e8;
+
+  --code-bg:       #18181b;
+  --code-text:     #6ee7b7;
+  --table-head-bg: #f3f3f6;
+  --table-row-alt: #f8f8fa;
+  --number-color:  #047857;
+  --output-bg:     #18181b;
+  --output-text:   #f0f0f2;
 }
 
 /* ═══════════════════════════════════════════════
@@ -101,7 +167,8 @@ html.light {
 body {
   background:  var(--bg);
   color:       var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-feature-settings: "cv02","cv03","cv04","cv11";
   font-size:   14px;
   line-height: 1.6;
   margin:      0;
@@ -111,6 +178,10 @@ body {
 
 /* Light mode: make sidebar visually distinct */
 html.light aside { box-shadow: 1px 0 0 var(--border); }
+
+/* ── Tailwind dark class overrides — keep border/bg consistent ── */
+.dark\:border-neutral-700 { border-color: var(--border) !important; }
+.dark\:bg-neutral-800     { background-color: var(--surface) !important; }
 
 /* ── Global button press feedback ───────────────
    Every pressable element should acknowledge the user.
@@ -219,16 +290,44 @@ pre, code { font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monosp
 ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 
 /* ═══════════════════════════════════════════════
-   Inputs & Selects (global override for contrast)
-   Only applied inside the main app shell, not login/auth pages
+   Inputs & Selects — global consistent style
    ═══════════════════════════════════════════════ */
-main input, main textarea, main select,
-aside input, aside textarea, aside select {
-  color:      var(--text) !important;
-  background: var(--surface3) !important;
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,
+select {
+  background:    var(--surface3);
+  color:         var(--text);
+  border:        1px solid var(--border2);
+  border-radius: 8px;
+  font-size:     13px;
+  font-family:   inherit;
+  outline:       none;
+  transition:    border-color 150ms ease, box-shadow 150ms ease;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
 }
-main input::placeholder, main textarea::placeholder,
-aside input::placeholder, aside textarea::placeholder { color: var(--text-dim) !important; }
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent) !important;
+  box-shadow:   0 0 0 3px var(--accent-dim) !important;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-dim);
+}
+/* Light mode: use white surface for inputs */
+html.light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.light textarea,
+html.light select {
+  background: var(--surface);
+  border-color: var(--border2);
+}
+select option {
+  background: var(--surface2);
+  color:      var(--text);
+}
 
 /* ═══════════════════════════════════════════════
    Plotly
@@ -335,9 +434,9 @@ aside input::placeholder, aside textarea::placeholder { color: var(--text-dim) !
 
 /* ── AI orb radiance — pulsing rings while generating ── */
 @keyframes orbRadiance {
-  0%   { box-shadow: 0 0 0 0 rgba(0,200,150,0.55), 0 0 0 0 rgba(0,200,150,0.3); }
-  70%  { box-shadow: 0 0 0 14px rgba(0,200,150,0), 0 0 0 28px rgba(0,200,150,0); }
-  100% { box-shadow: 0 0 0 0 rgba(0,200,150,0),    0 0 0 0 rgba(0,200,150,0); }
+  0%   { box-shadow: 0 0 0 0 var(--accent-glow), 0 0 0 0 var(--accent-dim); }
+  70%  { box-shadow: 0 0 0 14px transparent, 0 0 0 28px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
 }
 .ai-orb { animation: orbRadiance 1.6s ease-out infinite; }
 
@@ -362,7 +461,7 @@ aside input::placeholder, aside textarea::placeholder { color: var(--text-dim) !
   50%       { background-position: 100% 50%; }
 }
 .ai-gradient-text {
-  background: linear-gradient(90deg, #00c896, #33d9ab, #6ee7b7, #00c896);
+  background: linear-gradient(90deg, var(--accent), var(--accent-light), var(--green), var(--accent));
   background-size: 300% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -379,8 +478,8 @@ aside input::placeholder, aside textarea::placeholder { color: var(--text-dim) !
 
 /* ── Logo glow pulse — subtle brand anchor, non-distracting ── */
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0,200,150,0); }
-  50%       { box-shadow: 0 0 18px 5px rgba(0,200,150,0.35); }
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50%       { box-shadow: 0 0 18px 5px var(--accent-glow); }
 }
 .logo-glow { animation: glowPulse 2.8s ease-in-out infinite; }
 
@@ -400,14 +499,14 @@ aside input::placeholder, aside textarea::placeholder { color: var(--text-dim) !
 
 /* ── CTA button shimmer — gradient shifts on hover, feels alive ── */
 .btn-cta {
-  background: linear-gradient(135deg, #00c896 0%, #059669 50%, #00c896 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent) 100%);
   background-size: 200% auto;
   transition: background-position 400ms var(--ease-out), transform 160ms var(--ease-out), box-shadow 200ms var(--ease-out) !important;
 }
 @media (hover: hover) and (pointer: fine) {
   .btn-cta:hover {
     background-position: right center;
-    box-shadow: 0 4px 18px rgba(0,200,150,0.4);
+    box-shadow: 0 4px 18px var(--accent-glow);
   }
 }
 .btn-cta:active { transform: scale(0.97) !important; }
@@ -437,4 +536,95 @@ aside input::placeholder, aside textarea::placeholder { color: var(--text-dim) !
   button           { transition: opacity 120ms ease; }
   button:active    { transform: none; }
   *                { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   Mobile App & Responsive
+   ═══════════════════════════════════════════════ */
+
+/* Safe area tokens — notch, Dynamic Island, home indicator */
+:root {
+  --safe-top:     env(safe-area-inset-top,    0px);
+  --safe-bottom:  env(safe-area-inset-bottom, 0px);
+  --safe-left:    env(safe-area-inset-left,   0px);
+  --safe-right:   env(safe-area-inset-right,  0px);
+  --mobile-header-h: 52px;
+  --bottom-nav-h:    60px;
+}
+
+/* Dynamic viewport — compensates for mobile browser chrome */
+html, body { height: 100%; }
+
+/* Remove blue flash on tap (iOS/Android) */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Prevent pull-to-refresh fighting with our scroll areas */
+html { overscroll-behavior-y: none; }
+
+/* iOS: prevent zoom-on-focus for inputs smaller than 16px */
+@media (pointer: coarse) {
+  input, textarea, select {
+    font-size: 16px !important;
+    /* override the 13px default so iOS doesn't zoom */
+  }
+}
+
+/* Bottom nav */
+.mobile-nav {
+  display: flex;
+  align-items: stretch;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-bottom);
+  flex-shrink: 0;
+}
+.mobile-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  min-height: 56px;
+  transition: color 150ms ease;
+}
+.mobile-nav-pill {
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 2px;
+  border-radius: 0 0 3px 3px;
+  background: var(--accent);
+}
+.mobile-nav-label { font-size: 10px; font-weight: 500; }
+
+/* Mobile drawer */
+@keyframes drawerBgIn  { from { opacity: 0;    } to { opacity: 1;    } }
+@keyframes drawerBgOut { from { opacity: 1;    } to { opacity: 0;    } }
+@keyframes drawerIn    { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+.drawer-backdrop {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: drawerBgIn 220ms var(--ease-out) both;
+}
+.drawer-panel {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: min(300px, 88vw);
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface2);
+  border-right: 1px solid var(--border);
+  box-shadow: 6px 0 40px rgba(0, 0, 0, 0.4);
+  animation: drawerIn 260ms var(--ease-drawer) both;
+  padding-top: var(--safe-top);
+  overflow: hidden;
 }

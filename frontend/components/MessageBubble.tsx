@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight, Terminal, BarChart2, AlertTriangle } from "lucide-react";
 import ChartPickerModal from "./ChartPickerModal";
-import MessageActions from "./MessageActions";
+import MessageActions, { SchedulePanel, EmailPanel, Panel } from "./MessageActions";
 import { Dataset } from "@/lib/api";
 
 interface MessageProps {
@@ -119,7 +119,7 @@ function Inline({ text }: { text: string }) {
         if (p.startsWith("**") && p.endsWith("**"))
           return <strong key={i} style={{ fontWeight: 650, color: "var(--text)" }}>{p.slice(2, -2)}</strong>;
         if (p.startsWith("`") && p.endsWith("`"))
-          return <code key={i} style={{ background: "rgba(0,200,150,0.12)", color: "var(--accent-light)", padding: "1px 6px", borderRadius: 4, fontSize: 12, fontFamily: "monospace" }}>{p.slice(1, -1)}</code>;
+          return <code key={i} style={{ background: "var(--accent-dim)", color: "var(--accent-light)", padding: "1px 6px", borderRadius: 4, fontSize: 12, fontFamily: "monospace" }}>{p.slice(1, -1)}</code>;
         return <span key={i}>{p}</span>;
       })}
     </>
@@ -172,7 +172,7 @@ function Block({ block }: { block: Block }) {
       <ol style={{ margin: "6px 0 10px", padding: 0, listStyle: "none" }}>
         {block.items.map((item, i) => (
           <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, margin: "5px 0", fontSize: 14, color: "var(--text)", lineHeight: 1.7 }}>
-            <span style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(0,200,150,0.15)", color: "var(--accent-light)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, flexShrink: 0, marginTop: 2 }}>{i + 1}</span>
+            <span style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--accent-dim)", color: "var(--accent-light)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, flexShrink: 0, marginTop: 2 }}>{i + 1}</span>
             <span><Inline text={item} /></span>
           </li>
         ))}
@@ -205,6 +205,7 @@ export default function MessageBubble({ role, content, executedCode, codeOutput,
   const isError = !isUser && content.startsWith("__error__:");
   const errorMsg = isError ? content.slice("__error__:".length) : null;
   const [showChartPicker, setShowChartPicker] = useState(false);
+  const [actionsPanel, setActionsPanel] = useState<Panel>(null);
   const showActions = !isUser && !isStreaming && !isError && content.trim().length > 0;
 
   return (
@@ -296,12 +297,22 @@ export default function MessageBubble({ role, content, executedCode, codeOutput,
           )}
 
           {showActions && dataset && conversationId && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-              <button onClick={() => setShowChartPicker(true)}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer", background: "rgba(0,200,150,0.1)", border: "1px solid rgba(0,200,150,0.35)", color: "var(--accent-light)" }}>
-                <BarChart2 size={12} /> Create chart
-              </button>
-              <MessageActions dataset={dataset} conversationId={conversationId} messageContent={content} charts={charts || []} onChartSaved={onChartSaved || (() => {})} />
+            <div style={{ marginTop: 4, width: "100%" }}>
+              {/* Button row — never changes height, so siblings never shift */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <button onClick={() => setShowChartPicker(true)}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer", background: "var(--accent-dim)", border: "1px solid var(--border-accent)", color: "var(--accent-light)" }}>
+                  <BarChart2 size={12} /> Create chart
+                </button>
+                <MessageActions open={actionsPanel} onToggle={setActionsPanel} />
+              </div>
+              {/* Panels render below the button row — not inside it */}
+              {actionsPanel === "schedule" && (
+                <SchedulePanel dataset={dataset} conversationId={conversationId} question={content} onClose={() => setActionsPanel(null)} />
+              )}
+              {actionsPanel === "email" && (
+                <EmailPanel content={content} dataset={dataset} onClose={() => setActionsPanel(null)} />
+              )}
             </div>
           )}
         </div>

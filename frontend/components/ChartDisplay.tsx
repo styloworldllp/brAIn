@@ -7,19 +7,19 @@ const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
 // ── World-class color palettes ─────────────────────────────────
 const PALETTE_VIBRANT = [
-  "#2bc4a0",
-  "#34d399",
+  "var(--accent-light)",
+  "var(--accent-light)",
   "#fb923c",
   "#f472b6",
   "#60a5fa",
   "#fbbf24",
-  "#33d9ab",
+  "var(--accent-light)",
   "#2dd4bf", // teal
   "#f87171", // red
   "#4ade80", // green
 ];
 
-const PALETTE_GRADIENT_FROM = "#00c896";
+const PALETTE_GRADIENT_FROM = "var(--accent)";
 const PALETTE_GRADIENT_TO   = "#06b6d4";
 
 // ── Apply world-class theming to any chart ─────────────────────
@@ -62,7 +62,7 @@ function applyTheme(data: Plotly.Data[], layoutIn: Partial<Plotly.Layout>): {
       t.textfont = { ...t.textfont, color: textCol };
       t.outsidetextfont = { color: textCol, size: 12 };
     } else if (t.type === "heatmap") {
-      t.colorscale = [[0, "#1e1b4b"], [0.5, "#00c896"], [1, "#34d399"]];
+      t.colorscale = [[0, "#1e1b4b"], [0.5, "var(--accent)"], [1, "var(--accent-light)"]];
     } else if (t.type === "histogram") {
       t.marker = { ...t.marker, color: color, opacity: 0.88, line: { color: "rgba(0,0,0,0)" } };
     }

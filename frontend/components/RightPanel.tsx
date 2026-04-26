@@ -5,7 +5,7 @@ import { AISpinner } from "./AISpinner";
 import { Dataset } from "@/lib/api";
 import { withAuthHeaders } from "@/lib/auth";
 
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 interface Props { dataset: Dataset | null; }
 interface PIIInfo { is_pii: boolean; category: string | null; severity: "high" | "medium" | "low" | null; }
 const SEV_COLOR = { high: "#ef4444", medium: "#f59e0b", low: "#60a5fa" };
@@ -16,8 +16,8 @@ const PII_CATS  = ["Name","Email","Phone","National ID","Address","Postal Code",
 function typeColor(dtype: string): string {
   const d = dtype.toLowerCase();
   if (d.includes("date") || d.includes("time") || d.includes("timestamp")) return "#60a5fa"; // blue
-  if (d.includes("int") || d.includes("float") || d.includes("double") || d.includes("decimal") || d.includes("numeric") || d.includes("real")) return "#33d9ab"; // purple
-  if (d.includes("bool")) return "#34d399"; // green
+  if (d.includes("int") || d.includes("float") || d.includes("double") || d.includes("decimal") || d.includes("numeric") || d.includes("real")) return "var(--accent-light)"; // purple
+  if (d.includes("bool")) return "var(--accent-light)"; // green
   return "#2dd4bf"; // teal for text/categorical
 }
 function typeDot(dtype?: string): string {
@@ -67,7 +67,7 @@ export default function RightPanel({ dataset }: Props) {
       if (!cols.length) return;
       setLoading(true);
       fetch(`${BASE}/db/detect-pii`, { method: "POST", headers: withAuthHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ columns: cols }) })
-        .then(r => r.json()).then(res => setPiiData(res.pii_results || {})).catch(() => {}).finally(() => setLoading(false));
+        .then(r => r.json()).then(res => setPiiData(res.pii_results || {})).catch(e => console.error("Failed to detect PII:", e)).finally(() => setLoading(false));
       
     }
 
@@ -90,12 +90,12 @@ export default function RightPanel({ dataset }: Props) {
     await fetch(`${BASE}/datasets/${dataset.id}/pii-config`, {
       method: "POST", headers: withAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ excluded_columns: exclCols, manual_pii: { [mark.col]: { category: mark.category, severity: mark.severity } } }),
-    }).catch(() => {});
+    }).catch(e => console.error("Failed to save PII config:", e));
     setMark(prev => ({ ...prev, col: null }));
   };
 
   if (!dataset) return (
-    <aside style={{ width: 260, flexShrink: 0, height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--surface2)", borderLeft: "1px solid var(--border)" }}>
+    <aside style={{ width: 260, flexShrink: 0, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--surface2)", borderLeft: "1px solid var(--border)" }}>
       <FileText size={24} style={{ color: "var(--text-dim)", opacity: 0.3 }} />
       <p style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 10, textAlign: "center", padding: "0 20px" }}>Select a dataset to explore its schema</p>
     </aside>
@@ -113,7 +113,7 @@ export default function RightPanel({ dataset }: Props) {
   const totalCols = isLive && tables ? tables.reduce((s, t) => s + Object.keys((schema as Record<string,Record<string,unknown>>)[t] || {}).length, 0) : Object.keys(schema).filter(k => !k.startsWith("__")).length;
 
   return (
-    <aside style={{ width: 260, flexShrink: 0, height: "100vh", display: "flex", flexDirection: "column", background: "var(--surface2)", borderLeft: "1px solid var(--border)" }}>
+    <aside style={{ width: 260, flexShrink: 0, height: "100%", display: "flex", flexDirection: "column", background: "var(--surface2)", borderLeft: "1px solid var(--border)" }}>
       {/* Header */}
       <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid var(--border)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>

@@ -34,7 +34,7 @@ const CONNECTORS = [
 ];
 
 const inp = { background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)" };
-const inpClass = "w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors focus:ring-1 focus:ring-[#00c896]/60";
+const inpClass = "w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors focus:ring-1 focus:ring-[var(--accent)]";
 
 /* ── Root: manages all steps at the top level ── */
 export default function ConnectModal({ onClose, onSuccess }: Props) {
@@ -48,10 +48,10 @@ export default function ConnectModal({ onClose, onSuccess }: Props) {
   };
 
   return (
-    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+    <div className="modal-backdrop" style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-panel rounded-2xl w-full max-w-lg shadow-2xl"
-        style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+      <div className="modal-panel"
+        style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 16, width: "100%", maxWidth: 512, boxShadow: "0 25px 50px rgba(0,0,0,0.35)" }}>
 
         {step !== "browse" && (
           <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
@@ -100,7 +100,8 @@ export default function ConnectModal({ onClose, onSuccess }: Props) {
               tables={browseState.tables}
               onClose={onClose}
               onSave={async (result) => {
-                const ds = await fetch(`http://localhost:8000/api/datasets/${result.dataset_id}`, { headers: withAuthHeaders() })
+                const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+                const ds = await fetch(`${API}/api/datasets/${result.dataset_id}`, { headers: withAuthHeaders() })
                   .then(r => r.json()).catch(() => null);
                 if (ds) onSuccess(ds);
                 onClose();
@@ -143,7 +144,8 @@ function DBForm({ type, connector, onBack, onClose, onSuccess, onOpenBrowser }: 
 
   const handleTest = async () => {
     setTesting(true); setTestResult(null); setError("");
-    const res = await fetch("http://localhost:8000/api/db/test", {
+    const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    const res = await fetch(`${API}/api/db/test`, {
       method: "POST", headers: withAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(payload()),
     }).then(r => r.json()).catch(e => ({ success: false, error: String(e) }));
@@ -153,8 +155,9 @@ function DBForm({ type, connector, onBack, onClose, onSuccess, onOpenBrowser }: 
   const handleConnect = async () => {
     setLoading(true); setError("");
     try {
+      const API2 = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
       if (loadMode === "all") {
-        const res = await fetch("http://localhost:8000/api/db/test", {
+        const res = await fetch(`${API2}/api/db/test`, {
           method: "POST", headers: withAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload()),
         }).then(r => r.json());
@@ -168,7 +171,7 @@ function DBForm({ type, connector, onBack, onClose, onSuccess, onOpenBrowser }: 
         return;
       }
       if (!tableOrQuery.trim()) { setError("Enter a table name or SQL query."); return; }
-      const ds = await fetch("http://localhost:8000/api/datasets/connect-db-table", {
+      const ds = await fetch(`${API2}/api/datasets/connect-db-table`, {
         method: "POST", headers: withAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ ...payload(), table_or_query: tableOrQuery }),
       }).then(r => { if (!r.ok) return r.json().then(e => Promise.reject(e.detail)); return r.json(); });
@@ -200,8 +203,8 @@ function DBForm({ type, connector, onBack, onClose, onSuccess, onOpenBrowser }: 
         {([["all", LayoutGrid, "All tables (live)", "Browse & select tables"] , ["specific", Table2, "Specific table", "One table or query"]] as const).map(([id, Icon, title, sub]) => (
           <button key={id} onClick={() => setLoadMode(id)}
             className="flex items-center gap-2 p-3 rounded-xl text-left transition-all"
-            style={{ border: `2px solid ${loadMode === id ? "#00c896" : "var(--border)"}`, background: loadMode === id ? "rgba(0,200,150,0.08)" : "var(--bg)" }}>
-            <Icon size={15} style={{ color: loadMode === id ? "#33d9ab" : "var(--text-dim)" }} />
+            style={{ border: `2px solid ${loadMode === id ? "var(--accent)" : "var(--border)"}`, background: loadMode === id ? "var(--accent-dim)" : "var(--bg)" }}>
+            <Icon size={15} style={{ color: loadMode === id ? "var(--accent-light)" : "var(--text-dim)" }} />
             <div><p className="text-xs font-medium" style={{ color: "var(--text)" }}>{title}</p><p className="text-[10px]" style={{ color: "var(--text-dim)" }}>{sub}</p></div>
           </button>
         ))}
@@ -215,7 +218,7 @@ function DBForm({ type, connector, onBack, onClose, onSuccess, onOpenBrowser }: 
       )}
 
       {loadMode === "all" && (
-        <div className="px-3 py-2.5 rounded-lg text-xs" style={{ background: "rgba(0,200,150,0.08)", border: "1px solid rgba(0,200,150,0.2)", color: "#6ee7b7" }}>
+        <div className="px-3 py-2.5 rounded-lg text-xs" style={{ background: "var(--accent-dim)", border: "1px solid var(--accent-glow)", color: "#6ee7b7" }}>
           ✦ Queries run live on your DB — you'll pick tables and configure PII next
         </div>
       )}
@@ -238,7 +241,7 @@ function DBForm({ type, connector, onBack, onClose, onSuccess, onOpenBrowser }: 
         </button>
         <button onClick={handleConnect} disabled={loading || !host || !database}
           className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-40 hover:opacity-90 transition-all"
-          style={{ background: "linear-gradient(135deg,#00c896,#059669)" }}>
+          style={{ background: "linear-gradient(135deg,var(--accent),var(--accent2))" }}>
           {loading && <AISpinner size={13} />}
           {loading ? "Connecting…" : loadMode === "all" ? "Browse tables →" : "Connect"}
         </button>
@@ -258,7 +261,8 @@ function SheetsForm({ onBack, onClose, onSuccess }: { onBack: () => void; onClos
   const handleConnect = async () => {
     setLoading(true); setError("");
     try {
-      const ds = await fetch("http://localhost:8000/api/datasets/connect-sheets", {
+      const API3 = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+      const ds = await fetch(`${API3}/api/datasets/connect-sheets`, {
         method: "POST", headers: withAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ name, sheet_url: url, service_account_json: creds || undefined }),
       }).then(r => { if (!r.ok) return r.json().then(e => Promise.reject(e.detail)); return r.json(); });

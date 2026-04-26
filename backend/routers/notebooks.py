@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
-from db import get_db, Base, engine, User
+from db import get_db, Base, engine, User, Dataset
 from routers.auth import require_brain_access
 
 router = APIRouter()
@@ -14,14 +14,16 @@ router = APIRouter()
 
 class Notebook(Base):
     __tablename__ = "notebooks"
-    id          = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    title       = Column(String, nullable=False)
-    description = Column(Text, default="")
-    dataset_id  = Column(String)
-    cells       = Column(JSON, default=list)   # list of {id, type, content, output}
-    template    = Column(String, default="blank")
-    created_at  = Column(DateTime, default=datetime.utcnow)
-    updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    __table_args__ = {"extend_existing": True}
+    id              = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    organization_id = Column(String, nullable=True, index=True)
+    title           = Column(String, nullable=False)
+    description     = Column(Text, default="")
+    dataset_id      = Column(String)
+    cells           = Column(JSON, default=list)
+    template        = Column(String, default="blank")
+    created_at      = Column(DateTime, default=datetime.utcnow)
+    updated_at      = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 # Create table if not exists
@@ -85,8 +87,10 @@ def list_templates(_: User = Depends(require_brain_access)):
 
 
 @router.get("/")
-def list_notebooks(db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
-    return [_s(n) for n in db.query(Notebook).order_by(Notebook.updated_at.desc()).all()]
+def list_notebooks(db: Session = Depends(get_db), user: User = Depends(require_brain_access)):
+    return [_s(n) for n in db.query(Notebook).filter(
+        Notebook.organization_id == user.organization_id,
+    ).order_by(Notebook.updated_at.desc()).all()]
 
 
 class CreateNotebookRequest(BaseModel):
@@ -97,32 +101,48 @@ class CreateNotebookRequest(BaseModel):
 
 
 @router.post("/")
-def create_notebook(req: CreateNotebookRequest, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
+def create_notebook(req: CreateNotebookRequest, db: Session = Depends(get_db), user: User = Depends(require_brain_access)):
     tmpl  = TEMPLATES.get(req.template, {})
     cells = tmpl.get("cells", [{"id": str(uuid.uuid4()), "type": "code", "content": "# Start your analysis\ndf.head()", "output": None}])
-    # Give each cell a fresh ID
     import copy
     cells = copy.deepcopy(cells)
     for c in cells:
         c["id"] = str(uuid.uuid4())
 
+    ds_id = (req.dataset_ids or [req.dataset_id])[0] if (req.dataset_ids or [req.dataset_id])[0] else None
+    if ds_id:
+        owned = db.query(Dataset).filter(
+            Dataset.id == ds_id,
+            Dataset.organization_id == user.organization_id,
+        ).first()
+        if not owned:
+            raise HTTPException(404, "Dataset not found")
+
     n = Notebook(
-        id          = str(uuid.uuid4()),
-        title       = req.title or tmpl.get("title", "Untitled notebook"),
-        description = tmpl.get("description", ""),
-        dataset_id  = (req.dataset_ids or [req.dataset_id])[0] if (req.dataset_ids or [req.dataset_id])[0] else None,
-        cells       = cells,
-        template    = req.template or "blank",
+        id              = str(uuid.uuid4()),
+        organization_id = user.organization_id,
+        title           = req.title or tmpl.get("title", "Untitled notebook"),
+        description     = tmpl.get("description", ""),
+        dataset_id      = ds_id,
+        cells           = cells,
+        template        = req.template or "blank",
     )
     db.add(n); db.commit()
     return _s(n)
 
 
-@router.get("/{notebook_id}")
-def get_notebook(notebook_id: str, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
-    n = db.query(Notebook).filter(Notebook.id == notebook_id).first()
+def _get_nb(db: Session, user: User, notebook_id: str) -> Notebook:
+    n = db.query(Notebook).filter(
+        Notebook.id == notebook_id,
+        Notebook.organization_id == user.organization_id,
+    ).first()
     if not n: raise HTTPException(404, "Not found")
-    return _s(n)
+    return n
+
+
+@router.get("/{notebook_id}")
+def get_notebook(notebook_id: str, db: Session = Depends(get_db), user: User = Depends(require_brain_access)):
+    return _s(_get_nb(db, user, notebook_id))
 
 
 class UpdateNotebookRequest(BaseModel):
@@ -133,9 +153,8 @@ class UpdateNotebookRequest(BaseModel):
 
 
 @router.patch("/{notebook_id}")
-def update_notebook(notebook_id: str, req: UpdateNotebookRequest, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
-    n = db.query(Notebook).filter(Notebook.id == notebook_id).first()
-    if not n: raise HTTPException(404, "Not found")
+def update_notebook(notebook_id: str, req: UpdateNotebookRequest, db: Session = Depends(get_db), user: User = Depends(require_brain_access)):
+    n = _get_nb(db, user, notebook_id)
     if req.title      is not None: n.title      = req.title
     if req.cells      is not None: n.cells      = req.cells
     if req.dataset_ids is not None:
@@ -148,8 +167,7 @@ def update_notebook(notebook_id: str, req: UpdateNotebookRequest, db: Session = 
 
 
 @router.delete("/{notebook_id}")
-def delete_notebook(notebook_id: str, db: Session = Depends(get_db), _: User = Depends(require_brain_access)):
-    n = db.query(Notebook).filter(Notebook.id == notebook_id).first()
-    if not n: raise HTTPException(404, "Not found")
+def delete_notebook(notebook_id: str, db: Session = Depends(get_db), user: User = Depends(require_brain_access)):
+    n = _get_nb(db, user, notebook_id)
     db.delete(n); db.commit()
     return {"ok": True}

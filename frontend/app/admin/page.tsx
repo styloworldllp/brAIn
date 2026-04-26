@@ -5,10 +5,10 @@ import {
   Users, Shield, UserPlus, Trash2, Edit2, Check, X, ChevronLeft,
   Activity, Database, Key, Eye, EyeOff, AlertCircle, Search,
 } from "lucide-react";
-import { AuthUser, getToken, fetchMe, isAdmin, clearToken } from "@/lib/auth";
+import { AuthUser, getToken, fetchMe, isAdmin, logout } from "@/lib/auth";
 import { AISpinner } from "@/components/AISpinner";
 
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 type Role = "admin" | "user" | "viewer";
 type Tab  = "users" | "permissions";
 
@@ -172,7 +172,7 @@ export default function AdminPage() {
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>{me?.username?.[0]?.toUpperCase()}</span>
                 </div>
             }
-            <button onClick={() => { clearToken(); router.replace("/login"); }}
+            <button onClick={() => { logout().then(() => router.replace("/login")); }}
               style={{ fontSize: 11, color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}>
               Sign out
             </button>

@@ -1,124 +1,45 @@
 "use client";
 import { useState, useEffect } from "react";
 import { AISpinner } from "./AISpinner";
-import { X, Eye, EyeOff, CheckCircle2, Cpu } from "lucide-react";
+import { X, CheckCircle2, Eye, EyeOff, Zap } from "lucide-react";
 import { withAuthHeaders } from "@/lib/auth";
+import { fetchNeurixStatus, NeurixStatus } from "@/lib/api";
 
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 interface Props { onClose: () => void; }
-const inputClass = "w-full bg-[#0d0f1a] border border-[#1e2235] rounded-lg px-3 py-2 text-sm text-[#e8eaf0] placeholder-[#3e4357] focus:outline-none focus:border-[#00c896]/60 transition-colors";
-
-const PROVIDERS = [
-  {
-    id: "anthropic",
-    name: "Anthropic",
-    tagline: "brAIn default · Best for analysis",
-    color: "border-[#00c896] bg-[#00c896]/10",
-    dim: "border-[#1e2235] hover:border-[#00c896]/40",
-    badge: "bg-[#00c896]/20 text-[#33d9ab]",
-    badgeText: "Default",
-    models: [
-      { value: "claude-sonnet-4-6",  label: "Claude Sonnet 4 — Fast & smart (recommended)" },
-      { value: "claude-opus-4-6",    label: "Claude Opus 4 — Most capable" },
-      { value: "claude-haiku-4-5-20251001",   label: "Claude Haiku — Fastest" },
-    ],
-    keyPlaceholder: "sk-ant-...",
-    keyLink: "https://console.anthropic.com",
-    keyLinkText: "console.anthropic.com",
-    logo: (
-      <svg viewBox="0 0 32 32" className="w-7 h-7 shrink-0">
-        <rect width="32" height="32" rx="8" fill="#059669"/>
-        <text x="16" y="22" fontFamily="serif" fontSize="16" fontWeight="bold" fill="white" textAnchor="middle">A</text>
-      </svg>
-    ),
-  },
-  {
-    id: "openai",
-    name: "OpenAI",
-    tagline: "Alternative engine · Widely used",
-    color: "border-green-500 bg-green-500/10",
-    dim: "border-[#1e2235] hover:border-green-500/40",
-    badge: "bg-green-500/20 text-green-400",
-    badgeText: "GPT-4",
-    models: [
-      { value: "gpt-4o",       label: "GPT-4o — Most capable" },
-      { value: "gpt-4o-mini",  label: "GPT-4o Mini — Faster & cheaper" },
-      { value: "gpt-4-turbo",  label: "GPT-4 Turbo" },
-    ],
-    keyPlaceholder: "sk-...",
-    keyLink: "https://platform.openai.com/api-keys",
-    keyLinkText: "platform.openai.com",
-    logo: (
-      <svg viewBox="0 0 32 32" className="w-7 h-7 shrink-0">
-        <rect width="32" height="32" rx="8" fill="#10a37f"/>
-        <text x="16" y="22" fontFamily="Arial,sans-serif" fontSize="14" fontWeight="bold" fill="white" textAnchor="middle">AI</text>
-      </svg>
-    ),
-  },
-  {
-    id: "local",
-    name: "Local / Ollama",
-    tagline: "Run models on your Mac",
-    color: "border-amber-500 bg-amber-500/10",
-    dim: "border-[#1e2235] hover:border-amber-500/40",
-    badge: "bg-amber-500/20 text-amber-400",
-    badgeText: "Local",
-    models: [
-      { value: "llama3.2",     label: "Llama 3.2 (3B / 8B)" },
-      { value: "mistral",      label: "Mistral 7B" },
-      { value: "codellama",    label: "Code Llama" },
-      { value: "custom",       label: "Custom model name" },
-    ],
-    keyPlaceholder: "Not required for Ollama",
-    keyLink: "https://ollama.com",
-    keyLinkText: "Download Ollama",
-    logo: (
-      <svg viewBox="0 0 32 32" className="w-7 h-7 shrink-0">
-        <rect width="32" height="32" rx="8" fill="#92400e"/>
-        <Cpu size={16} color="white" x="8" y="8" />
-      </svg>
-    ),
-  },
-];
+const inpStyle: React.CSSProperties = { width: "100%", padding: "8px 12px", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box", background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)", transition: "border-color 140ms ease" };
 
 export default function AIModelModal({ onClose }: Props) {
-  const [provider, setProvider]   = useState("anthropic");
-  const [aModel, setAModel]       = useState("claude-sonnet-4-6");
-  const [oModel, setOModel]       = useState("gpt-4o");
-  const [lModel, setLModel]       = useState("llama3.2");
-  const [customModel, setCustomModel] = useState("");
-  const [aKey, setAKey]           = useState("");
-  const [oKey, setOKey]           = useState("");
-  const [lUrl, setLUrl]           = useState("http://localhost:11434");
-  const [showAKey, setShowAKey]   = useState(false);
-  const [showOKey, setShowOKey]   = useState(false);
-  const [hasAKey, setHasAKey]     = useState(false);
-  const [hasOKey, setHasOKey]     = useState(false);
-  const [saving, setSaving]       = useState(false);
-  const [saved, setSaved]         = useState(false);
-  const visibleProviders = PROVIDERS.filter(p => p.id !== "local");
+  const [provider,     setProvider]     = useState("anthropic");
+  const [aModel,       setAModel]       = useState("claude-sonnet-4-6");
+  const [oModel,       setOModel]       = useState("gpt-4o");
+  const [aKey,         setAKey]         = useState("");
+  const [oKey,         setOKey]         = useState("");
+  const [showAKey,     setShowAKey]     = useState(false);
+  const [showOKey,     setShowOKey]     = useState(false);
+  const [hasAKey,      setHasAKey]      = useState(false);
+  const [hasOKey,      setHasOKey]      = useState(false);
+  const [saving,       setSaving]       = useState(false);
+  const [saved,        setSaved]        = useState(false);
+  const [neurix,       setNeurix]       = useState<NeurixStatus | null>(null);
 
   useEffect(() => {
-    fetch(`${BASE}/settings/`, { headers: withAuthHeaders() }).then(r => r.json()).then(s => {
-      const nextProvider = s.provider === "openai" ? "openai" : "anthropic";
-      setProvider(nextProvider);
-      setAModel(s.anthropic_model || "claude-sonnet-4-6");
-      setOModel(s.openai_model || "gpt-4o");
-      setHasAKey(!!s.has_anthropic_key);
-      setHasOKey(!!s.has_openai_key);
-    }).catch(() => {});
+    fetch(`${BASE}/settings/`, { headers: withAuthHeaders() })
+      .then(r => r.json()).then(s => {
+        setProvider(s.provider || "anthropic");
+        setAModel(s.anthropic_model || "claude-sonnet-4-6");
+        setOModel(s.openai_model   || "gpt-4o");
+        setHasAKey(!!s.has_anthropic_key);
+        setHasOKey(!!s.has_openai_key);
+      }).catch(() => {});
+    fetchNeurixStatus().then(setNeurix).catch(() => {});
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
-    const body: Record<string, string> = {
-      provider,
-      anthropic_model: aModel,
-      openai_model: oModel,
-    };
+    const body: Record<string, string> = { provider, anthropic_model: aModel, openai_model: oModel };
     if (aKey) body.anthropic_api_key = aKey;
     if (oKey) body.openai_api_key    = oKey;
-
     await fetch(`${BASE}/settings/`, {
       method: "POST", headers: withAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
@@ -127,115 +48,197 @@ export default function AIModelModal({ onClose }: Props) {
     setTimeout(() => { setSaved(false); onClose(); }, 900);
   };
 
-  const activeP = visibleProviders.find(p => p.id === provider) || visibleProviders[0];
+  const providers: Array<{
+    id: string; name: string; tagline: string; accent: string; badge: string;
+    logo: React.ReactNode; disabled?: boolean; disabledMsg?: string;
+  }> = [
+    {
+      id: "anthropic", name: "Anthropic", tagline: "Best for analysis — brAIn default",
+      accent: "var(--accent)", badge: "Default",
+      logo: (
+        <svg viewBox="0 0 28 28" width={28} height={28}>
+          <rect width="28" height="28" rx="7" fill="var(--accent2)" />
+          <text x="14" y="20" fontFamily="serif" fontSize="14" fontWeight="bold" fill="white" textAnchor="middle">A</text>
+        </svg>
+      ),
+    },
+    {
+      id: "openai", name: "OpenAI", tagline: "Widely used · GPT-4o",
+      accent: "#10a37f", badge: "GPT-4",
+      logo: (
+        <svg viewBox="0 0 28 28" width={28} height={28}>
+          <rect width="28" height="28" rx="7" fill="#10a37f" />
+          <text x="14" y="20" fontFamily="Arial,sans-serif" fontSize="12" fontWeight="bold" fill="white" textAnchor="middle">AI</text>
+        </svg>
+      ),
+    },
+    {
+      id: "neurix", name: "Neurix", tagline: neurix?.has_instance
+        ? `Local LLM · ${neurix.neuron_balance.toLocaleString()} neurons`
+        : "Local LLM · No instance provisioned",
+      accent: "#f59e0b", badge: "Neurons",
+      disabled: !neurix?.has_instance,
+      disabledMsg: "No Neurix instance has been provisioned for your organisation. Contact your administrator.",
+      logo: (
+        <svg viewBox="0 0 28 28" width={28} height={28}>
+          <rect width="28" height="28" rx="7" fill="#92400e" />
+          <text x="14" y="20" fontFamily="monospace" fontSize="11" fontWeight="bold" fill="#fbbf24" textAnchor="middle">Nₓ</text>
+        </svg>
+      ),
+    },
+  ];
 
   return (
-    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-panel bg-[#12141f] border border-[#1e2235] rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e2235]">
-          <h2 className="text-sm font-semibold text-[#e8eaf0]">AI Model</h2>
-          <button onClick={onClose} className="text-[#3e4357] hover:text-[#8b90a8]"><X size={16} /></button>
+      <div style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 16, width: "100%", maxWidth: 448, boxShadow: "0 25px 50px rgba(0,0,0,0.35)" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
+          <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>AI Engine</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)" }}><X size={16} /></button>
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* Provider cards */}
+        <div style={{ padding: "20px 24px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* Provider selector */}
           <div>
-            <label className="block text-xs font-medium text-[#8b90a8] mb-2">Provider</label>
-            <div className="grid grid-cols-3 gap-2">
-              {visibleProviders.map(p => (
-                <button key={p.id} onClick={() => setProvider(p.id)}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all
-                    ${provider === p.id ? p.color : p.dim}`}>
-                  {p.logo}
-                  <span className="text-[11px] font-medium text-[#e8eaf0]">{p.name}</span>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${p.badge}`}>{p.badgeText}</span>
-                </button>
-              ))}
+            <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", marginBottom: 10, letterSpacing: "0.06em", textTransform: "uppercase" }}>Select Engine</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {providers.map(p => {
+                const active = provider === p.id;
+                return (
+                  <button key={p.id}
+                    onClick={() => !p.disabled && setProvider(p.id)}
+                    title={p.disabled ? p.disabledMsg : undefined}
+                    style={{
+                      display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                      padding: "12px 8px", borderRadius: 12, cursor: p.disabled ? "not-allowed" : "pointer",
+                      border: `2px solid ${active ? p.accent : "var(--border)"}`,
+                      background: active ? `${p.accent}18` : "var(--surface3)",
+                      opacity: p.disabled ? 0.45 : 1,
+                      transition: "all 140ms ease",
+                    }}
+                    onMouseEnter={e => { if (!p.disabled && !active) e.currentTarget.style.borderColor = `${p.accent}60`; }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = "var(--border)"; }}>
+                    {p.logo}
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text)" }}>{p.name}</span>
+                    <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: active ? `${p.accent}30` : "var(--accent-dim)", color: active ? p.accent : "var(--text-dim)", fontWeight: 600 }}>
+                      {p.badge}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-[10px] text-[#3e4357] mt-2 text-center">{activeP.tagline}</p>
+            <p style={{ fontSize: 10, color: "var(--text-dim)", textAlign: "center", marginTop: 6 }}>
+              {providers.find(p => p.id === provider)?.tagline}
+            </p>
           </div>
 
-          {/* Anthropic config */}
+          {/* ── Anthropic config ── */}
           {provider === "anthropic" && (
-            <div className="space-y-3">
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div>
-                <label className="block text-xs font-medium text-[#8b90a8] mb-1.5">
-                  API Key {hasAKey && <span className="text-green-400 ml-1">✓ saved</span>}
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6 }}>
+                  API Key {hasAKey && <span style={{ color: "#34d399", marginLeft: 4 }}>✓ saved</span>}
                 </label>
-                <div className="relative">
-                  <input type={showAKey ? "text" : "password"} className={inputClass + " pr-9"}
-                    placeholder={hasAKey ? "Leave blank to keep existing key" : "sk-ant-..."}
-                    value={aKey} onChange={e => setAKey(e.target.value)} />
-                  <button onClick={() => setShowAKey(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3e4357] hover:text-[#8b90a8]">
+                <div style={{ position: "relative" }}>
+                  <input type={showAKey ? "text" : "password"} style={{ ...inpStyle, paddingRight: 38 }}
+                    placeholder={hasAKey ? "Leave blank to keep existing" : "sk-ant-..."}
+                    value={aKey} onChange={e => setAKey(e.target.value)}
+                    onFocus={e => e.target.style.borderColor = "var(--accent)"}
+                    onBlur={e => e.target.style.borderColor = "var(--border)"} />
+                  <button onClick={() => setShowAKey(v => !v)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)" }}>
                     {showAKey ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
                 </div>
-                <p className="text-[10px] text-[#3e4357] mt-1">Get at <a href="https://console.anthropic.com" target="_blank" className="text-[#33d9ab] hover:underline">console.anthropic.com</a></p>
+                <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>Get at <a href="https://console.anthropic.com" target="_blank" style={{ color: "var(--accent-light)" }}>console.anthropic.com</a></p>
               </div>
               <div>
-                <label className="block text-xs font-medium text-[#8b90a8] mb-1.5">Model</label>
-                <select className={inputClass} value={aModel} onChange={e => setAModel(e.target.value)}>
-                  {PROVIDERS[0].models.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6 }}>Model</label>
+                <select style={inpStyle} value={aModel} onChange={e => setAModel(e.target.value)}
+                  onFocus={e => e.target.style.borderColor = "var(--accent)"}
+                  onBlur={e => e.target.style.borderColor = "var(--border)"}>
+                  <option value="claude-sonnet-4-6">Claude Sonnet 4 — Fast & smart (recommended)</option>
+                  <option value="claude-opus-4-6">Claude Opus 4 — Most capable</option>
+                  <option value="claude-haiku-4-5-20251001">Claude Haiku — Fastest</option>
                 </select>
               </div>
             </div>
           )}
 
-          {/* OpenAI config */}
+          {/* ── OpenAI config ── */}
           {provider === "openai" && (
-            <div className="space-y-3">
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div>
-                <label className="block text-xs font-medium text-[#8b90a8] mb-1.5">
-                  API Key {hasOKey && <span className="text-green-400 ml-1">✓ saved</span>}
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6 }}>
+                  API Key {hasOKey && <span style={{ color: "#34d399", marginLeft: 4 }}>✓ saved</span>}
                 </label>
-                <div className="relative">
-                  <input type={showOKey ? "text" : "password"} className={inputClass + " pr-9"}
-                    placeholder={hasOKey ? "Leave blank to keep existing key" : "sk-..."}
-                    value={oKey} onChange={e => setOKey(e.target.value)} />
-                  <button onClick={() => setShowOKey(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3e4357] hover:text-[#8b90a8]">
+                <div style={{ position: "relative" }}>
+                  <input type={showOKey ? "text" : "password"} style={{ ...inpStyle, paddingRight: 38 }}
+                    placeholder={hasOKey ? "Leave blank to keep existing" : "sk-..."}
+                    value={oKey} onChange={e => setOKey(e.target.value)}
+                    onFocus={e => e.target.style.borderColor = "#10a37f"}
+                    onBlur={e => e.target.style.borderColor = "var(--border)"} />
+                  <button onClick={() => setShowOKey(v => !v)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)" }}>
                     {showOKey ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
                 </div>
-                <p className="text-[10px] text-[#3e4357] mt-1">Get at <a href="https://platform.openai.com/api-keys" target="_blank" className="text-green-400 hover:underline">platform.openai.com</a></p>
+                <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>Get at <a href="https://platform.openai.com/api-keys" target="_blank" style={{ color: "#34d399" }}>platform.openai.com</a></p>
               </div>
               <div>
-                <label className="block text-xs font-medium text-[#8b90a8] mb-1.5">Model</label>
-                <select className={inputClass} value={oModel} onChange={e => setOModel(e.target.value)}>
-                  {PROVIDERS[1].models.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6 }}>Model</label>
+                <select style={inpStyle} value={oModel} onChange={e => setOModel(e.target.value)}
+                  onFocus={e => e.target.style.borderColor = "#10a37f"}
+                  onBlur={e => e.target.style.borderColor = "var(--border)"}>
+                  <option value="gpt-4o">GPT-4o — Most capable</option>
+                  <option value="gpt-4o-mini">GPT-4o Mini — Faster & cheaper</option>
+                  <option value="gpt-4-turbo">GPT-4 Turbo</option>
                 </select>
               </div>
             </div>
           )}
 
-          {/* Local / Ollama config */}
-          {provider === "local" && (
-            <div className="space-y-3">
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-300 space-y-1">
-                <p className="font-medium">Setup required:</p>
-                <p>1. Install Ollama from <a href="https://ollama.com" target="_blank" className="underline">ollama.com</a></p>
-                <p>2. Run: <code className="bg-black/30 px-1 rounded">ollama pull llama3.2</code></p>
-                <p>3. Ollama runs at localhost:11434 by default</p>
+          {/* ── Neurix config ── */}
+          {provider === "neurix" && neurix?.has_instance && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {/* Neuron balance card */}
+              <div style={{ borderRadius: 12, padding: "12px 16px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.25)", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(245,158,11,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Zap size={18} style={{ color: "#f59e0b" }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#f59e0b", lineHeight: 1.1 }}>
+                    {(neurix.neuron_balance || 0).toLocaleString()}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)" }}>
+                    Neurons available · {neurix.cost_per_query} per query
+                  </p>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--text-dim)", textAlign: "right" }}>
+                  <p style={{ margin: 0 }}>{neurix.model_name}</p>
+                  <p style={{ margin: 0, fontFamily: "monospace", opacity: 0.6, fontSize: 9 }}>local LLM</p>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-[#8b90a8] mb-1.5">Ollama URL</label>
-                <input className={inputClass} placeholder="http://localhost:11434" value={lUrl} onChange={e => setLUrl(e.target.value)} />
+
+              <div style={{ borderRadius: 10, padding: "10px 14px", background: "var(--surface3)", border: "1px solid var(--border)", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.6 }}>
+                <strong style={{ color: "var(--text)" }}>Neurix</strong> runs on your organisation's dedicated local LLM instance.
+                No data leaves your infrastructure. Neurons are deducted per analysis query.
               </div>
-              <div>
-                <label className="block text-xs font-medium text-[#8b90a8] mb-1.5">Model</label>
-                <select className={inputClass} value={lModel} onChange={e => setLModel(e.target.value)}>
-                  {PROVIDERS[2].models.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
-              </div>
-              {lModel === "custom" && (
-                <input className={inputClass} placeholder="Enter model name (e.g. mixtral:8x7b)"
-                  value={customModel} onChange={e => setCustomModel(e.target.value)} />
-              )}
             </div>
           )}
 
-          <button onClick={handleSave} disabled={saving || saved}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#00a876] hover:bg-[#00c896] disabled:opacity-60 text-white text-sm font-medium transition-colors">
+          <button onClick={handleSave} disabled={saving || saved || (provider === "neurix" && !neurix?.has_instance)}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 8, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 600,
+              cursor: saving || saved ? "default" : "pointer",
+              background: saved ? "var(--accent-dim)" : "linear-gradient(135deg,var(--accent),var(--accent2))",
+              color: saved ? "var(--accent-light)" : "#fff",
+              border: saved ? "1px solid var(--border-accent)" : "none",
+              opacity: (saving || (provider === "neurix" && !neurix?.has_instance)) ? 0.5 : 1,
+              transition: "all 150ms ease",
+            }}>
             {saving ? <AISpinner size={14} /> : saved ? <CheckCircle2 size={14} /> : null}
             {saving ? "Saving…" : saved ? "Saved!" : "Save"}
           </button>

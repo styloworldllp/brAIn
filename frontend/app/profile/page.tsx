@@ -5,10 +5,10 @@ import {
   User, Lock, Mail, Check, AlertCircle,
   Database, Shield, LogOut, ChevronRight, Settings, Crown,
 } from "lucide-react";
-import { AuthUser, getToken, fetchMe, clearToken, storeUser, isAdmin, isSuperAdmin } from "@/lib/auth";
+import { AuthUser, getToken, fetchMe, logout, storeUser, isAdmin, isSuperAdmin } from "@/lib/auth";
 import { AISpinner } from "@/components/AISpinner";
 
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
 function authHeaders() {
   return { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` };
@@ -86,7 +86,7 @@ export default function ProfilePage() {
     finally { setSaving(false); }
   };
 
-  const signOut = () => { clearToken(); router.replace("/login"); };
+  const signOut = () => { logout().then(() => router.replace("/login")); };
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f5f5f7" }}>

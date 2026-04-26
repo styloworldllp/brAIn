@@ -14,8 +14,19 @@ def ensure_data_dir():
     Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
 
 
+MIN_FREE_BYTES = int(os.getenv("MIN_FREE_DISK_MB", "200")) * 1024 * 1024
+
+
 def save_as_parquet(df: pd.DataFrame, dataset_id: str, table_name: str = "main") -> str:
     ensure_data_dir()
+    import shutil
+    free = shutil.disk_usage(DATA_DIR).free
+    if free < MIN_FREE_BYTES:
+        raise OSError(
+            f"Not enough disk space to save dataset "
+            f"(free: {free // (1024*1024)} MB, required: {MIN_FREE_BYTES // (1024*1024)} MB). "
+            "Free up space or set MIN_FREE_DISK_MB in .env."
+        )
     safe = table_name.replace(" ", "_").replace("/", "_")
     path = os.path.join(DATA_DIR, f"{dataset_id}__{safe}.parquet")
     # Coerce object columns with mixed types to string so PyArrow doesn't reject them
@@ -102,14 +113,17 @@ def test_db_connection(connection_string: str) -> dict:
 
 
 def load_google_sheet_public(sheet_url: str) -> pd.DataFrame:
-    import re
+    import re, requests
+    from io import StringIO
     match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", sheet_url)
     if not match: raise ValueError("Could not extract spreadsheet ID from URL.")
     sid = match.group(1)
     gid_match = re.search(r"gid=(\d+)", sheet_url)
     gid = gid_match.group(1) if gid_match else "0"
     url = f"https://docs.google.com/spreadsheets/d/{sid}/export?format=csv&gid={gid}"
-    return pd.read_csv(url, nrows=MAX_ROWS)
+    resp = requests.get(url, timeout=30)
+    resp.raise_for_status()
+    return pd.read_csv(StringIO(resp.text), nrows=MAX_ROWS)
 
 
 def load_google_sheet_service_account(sheet_url: str, creds_json: str) -> pd.DataFrame:

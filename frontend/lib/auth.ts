@@ -1,13 +1,14 @@
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
 export interface AuthUser {
   id: string;
   email: string;
   username: string;
-  role: "super_admin" | "admin" | "user" | "viewer";
+  role: "super_admin" | "staff" | "admin" | "user" | "viewer";
   avatar_url: string | null;
   is_active: boolean;
   oauth_provider: string | null;
+  organization_id: string | null;
   created_at: string;
   last_login: string | null;
 }
@@ -24,6 +25,17 @@ export function setToken(token: string) {
 export function clearToken() {
   localStorage.removeItem("brain_token");
   localStorage.removeItem("brain_user");
+}
+
+export async function logout(): Promise<void> {
+  const token = getToken();
+  if (token) {
+    await fetch(`${BASE}/auth/logout`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  }
+  clearToken();
 }
 
 export function getStoredUser(): AuthUser | null {
@@ -102,5 +114,9 @@ export function isSuperAdmin(user: AuthUser | null): boolean {
 }
 
 export function hasBrainAccess(user: AuthUser | null): boolean {
-  return !!user && user.role !== "super_admin";
+  return !!user && user.role !== "super_admin" && user.role !== "staff";
+}
+
+export function canViewAuditLog(user: AuthUser | null): boolean {
+  return !!user && ["admin", "staff", "super_admin"].includes(user.role);
 }

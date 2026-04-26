@@ -53,12 +53,12 @@ export default function DataSidebar({
   const [expandedDataset, setExpandedDataset] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchDatasets().then(setDatasets).catch(() => {});
+    fetchDatasets().then(setDatasets).catch(e => console.error("Failed to load datasets:", e));
   }, []);
 
   useEffect(() => {
     if (!selectedDataset) return;
-    fetchConversations(selectedDataset.id).then(setConversations).catch(() => {});
+    fetchConversations(selectedDataset.id).then(setConversations).catch(e => console.error("Failed to load conversations:", e));
     setExpandedDataset(selectedDataset.id);
   }, [selectedDataset]);
 

@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle, ArrowRight, Check } from "lucide-react";
 
-const BASE = "http://localhost:8000/api/auth";
+const BASE     = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/auth`;
+const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api`;
 
 const PROVIDERS = [
   { id: "google",    label: "Google",
@@ -211,9 +212,10 @@ function LoginContent({ splashDone }: { splashDone: boolean }) {
   const [password, setPassword]   = useState("");
   const [username, setUsername]   = useState("");
   const [showPw, setShowPw]       = useState(false);
-  const [loading, setLoading]     = useState(false);
-  const [oauthLoad, setOauthLoad] = useState<string | null>(null);
-  const [error, setError]         = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [oauthLoad, setOauthLoad]   = useState<string | null>(null);
+  const [oauthDone, setOauthDone]   = useState(false);
+  const [error, setError]           = useState("");
   const [mounted, setMounted]     = useState(false);
   const [success, setSuccess]     = useState(false);
   const [typedText, setTypedText] = useState("");
@@ -277,12 +279,26 @@ function LoginContent({ splashDone }: { splashDone: boolean }) {
   useEffect(() => {
     const token = params.get("token");
     const err   = params.get("error");
-    if (token) { localStorage.setItem("brain_token", token); router.replace("/"); }
+    if (token) {
+      setOauthDone(true);
+      localStorage.setItem("brain_token", token);
+      // Fetch user so role-based redirect works
+      fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(user => {
+          if (user) localStorage.setItem("brain_user", JSON.stringify(user));
+          if (user?.role === "super_admin") router.replace("/superadmin");
+          else if (user?.role === "staff")  router.replace("/staff");
+          else                              router.replace("/");
+        })
+        .catch(() => router.replace("/"));
+    }
     if (err) {
       const msgs: Record<string, string> = {
-        oauth_denied: "Sign-in was cancelled.",
-        token_exchange_failed: "OAuth failed. Try again.",
-        no_email: "Could not get your email from the provider.",
+        oauth_denied:          "Sign-in was cancelled.",
+        token_exchange_failed: "OAuth failed — please try again.",
+        no_email:              "Could not get your email address from the provider.",
+        invalid_state:         "OAuth session expired or was tampered with — please try again.",
       };
       setError(msgs[err] || "Authentication failed.");
     }
@@ -316,10 +332,26 @@ function LoginContent({ splashDone }: { splashDone: boolean }) {
       setSuccess(true);
       localStorage.setItem("brain_token", data.token);
       localStorage.setItem("brain_user", JSON.stringify(data.user));
-      setTimeout(() => router.replace(data.user?.role === "super_admin" ? "/superadmin" : "/"), 700);
+      const dest = data.user?.role === "super_admin" ? "/superadmin"
+                 : data.user?.role === "staff"       ? "/staff"
+                 : "/";
+      setTimeout(() => router.replace(dest), 700);
     } catch { setError("Network error — is the backend running?"); }
     finally   { setLoading(false); }
   };
+
+  if (oauthDone) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f4f9f6", flexDirection: "column", gap: 20 }}>
+        <NeuralCanvas />
+        <div style={{ position: "relative", zIndex: 1, textAlign: "center" }}>
+          <span className="spin-ring" style={{ width: 28, height: 28, borderWidth: 3 }} />
+          <p style={{ marginTop: 16, fontSize: 15, color: "#3a3a3c", fontWeight: 500 }}>Signing you in…</p>
+        </div>
+        <style>{`.spin-ring{display:inline-block;border-radius:50%;border:2px solid rgba(0,200,150,0.25);border-top-color:#00c896;animation:spinIt 560ms linear infinite}.@keyframes spinIt{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", background: "#f4f9f6", position: "relative", overflow: "hidden" }}>

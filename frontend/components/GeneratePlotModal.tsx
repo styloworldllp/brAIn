@@ -6,7 +6,7 @@ import ChartDisplay from "./ChartDisplay";
 import { Dataset } from "@/lib/api";
 import { withAuthHeaders } from "@/lib/auth";
 
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
 interface Props {
   dataset: Dataset;
@@ -91,35 +91,39 @@ export default function GeneratePlotModal({ dataset, conversationId, onClose, on
   };
 
   return (
-    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+    <div className="modal-backdrop" style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-panel bg-[#12141f] border border-[#1e2235] rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="modal-panel"
+        style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 16, width: "100%", maxWidth: 672, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 25px 50px rgba(0,0,0,0.35)" }}>
         {/* Header */}
-        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-[#1e2235]">
+        <div className="shrink-0 flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2">
-            <BarChart2 size={16} className="text-[#33d9ab]" />
+            <BarChart2 size={16} style={{ color: "var(--accent-light)" }} />
             <h2 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Generate a plot</h2>
           </div>
-          <button onClick={onClose} className="text-[#3e4357] hover:text-[#8b90a8]"><X size={16} /></button>
+          <button onClick={onClose} style={{ color: "var(--text-dim)" }} className="hover:opacity-70"><X size={16} /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {/* Dataset info */}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#00c896]/10 border border-[#00c896]/20">
-            <BarChart2 size={12} className="text-[#33d9ab]" />
-            <p className="text-xs text-[#00c896]">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--accent-dim)] border border-[var(--border-accent)]">
+            <BarChart2 size={12} className="text-[var(--accent-light)]" />
+            <p className="text-xs text-[var(--accent)]">
               Dataset: <strong>{dataset.name}</strong> — {dataset.row_count?.toLocaleString()} rows
             </p>
           </div>
 
           {/* Quick prompts */}
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#3e4357] mb-2">Quick charts</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-dim)" }}>Quick charts</p>
             <div className="flex flex-wrap gap-2">
               {QUICK_PROMPTS.map((qp, i) => (
                 <button key={i} onClick={() => { setPrompt(qp.prompt); generate(qp.prompt); }}
                   disabled={loading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#1e2235] text-xs text-[#8b90a8] hover:border-[#00c896]/40 hover:text-[#00c896] transition-colors disabled:opacity-40">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-40"
+                  style={{ border: "1px solid var(--border)", color: "var(--text-muted)" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-accent)"; (e.currentTarget as HTMLElement).style.color = "var(--accent)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}>
                   {qp.icon}{qp.label}
                 </button>
               ))}
@@ -128,10 +132,11 @@ export default function GeneratePlotModal({ dataset, conversationId, onClose, on
 
           {/* Custom prompt */}
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#3e4357] mb-2">Or describe your chart</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-dim)" }}>Or describe your chart</p>
             <div className="flex gap-2">
               <input
-                className="flex-1 bg-[#0d0f1a] border border-[#1e2235] rounded-lg px-3 py-2 text-sm text-[#e8eaf0] placeholder-[#3e4357] focus:outline-none focus:border-[#00c896]/60 transition-colors"
+                className="flex-1 rounded-lg px-3 py-2 text-sm outline-none transition-colors"
+                style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)" }}
                 placeholder="e.g. bar chart of revenue by region, sorted descending"
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
@@ -139,7 +144,7 @@ export default function GeneratePlotModal({ dataset, conversationId, onClose, on
                 disabled={loading}
               />
               <button onClick={() => generate()} disabled={loading || !prompt.trim()}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00a876] hover:bg-[#00c896] text-white text-sm font-medium disabled:opacity-40 transition-colors shrink-0">
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent2)] hover:bg-[var(--accent)] text-white text-sm font-medium disabled:opacity-40 transition-colors shrink-0">
                 {loading ? <AISpinner size={14} /> : <Sparkles size={14} />}
                 {loading ? "brAIn is working…" : "Generate"}
               </button>
@@ -155,7 +160,7 @@ export default function GeneratePlotModal({ dataset, conversationId, onClose, on
           {loading && (
             <div className="flex flex-col items-center gap-4 py-10">
               <div className="ai-orb relative flex items-center justify-center"
-                style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg,#00c896,#059669)" }}>
+                style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg,var(--accent),var(--accent2))" }}>
                 <div className="think-dots">
                   <span className="think-dot" style={{ background: "rgba(255,255,255,0.9)" }} />
                   <span className="think-dot" style={{ background: "rgba(255,255,255,0.9)" }} />
@@ -172,7 +177,7 @@ export default function GeneratePlotModal({ dataset, conversationId, onClose, on
           {/* Generated charts */}
           {!loading && charts.length > 0 && (
             <div className="space-y-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#3e4357]">
+              <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
                 {charts.length} chart{charts.length > 1 ? "s" : ""} generated
               </p>
               {charts.map((chart, i) => <ChartDisplay key={i} chartJson={chart} />)}
@@ -180,13 +185,14 @@ export default function GeneratePlotModal({ dataset, conversationId, onClose, on
               {/* Save */}
               <div className="flex items-center gap-2 pt-2">
                 <input
-                  className="flex-1 bg-[#0d0f1a] border border-[#1e2235] rounded-lg px-3 py-2 text-sm text-[#e8eaf0] placeholder-[#3e4357] focus:outline-none focus:border-[#00c896]/60 transition-colors"
+                  className="flex-1 rounded-lg px-3 py-2 text-sm outline-none transition-colors"
+                style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)" }}
                   placeholder="Chart title…"
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                 />
                 <button onClick={handleSave} disabled={saving || saved || !title}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00a876] hover:bg-[#00c896] text-white text-sm font-medium disabled:opacity-40 transition-colors shrink-0">
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent2)] hover:bg-[var(--accent)] text-white text-sm font-medium disabled:opacity-40 transition-colors shrink-0">
                   {saving ? <AISpinner size={13} /> : null}
                   {saved ? "Saved ✓" : saving ? "Saving…" : "Save to Charts"}
                 </button>

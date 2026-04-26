@@ -6,7 +6,7 @@ import ChartDisplay from "./ChartDisplay";
 import { Dataset } from "@/lib/api";
 import { withAuthHeaders } from "@/lib/auth";
 
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
 interface Props {
   dataset: Dataset;
@@ -17,10 +17,10 @@ interface Props {
 }
 
 const CHART_TYPES = [
-  { id: "recommend", label: "✦ Recommend for me", icon: <Sparkles size={16} />, color: "#33d9ab", border: "rgba(167,139,250,0.5)", bg: "rgba(0,200,150,0.12)", desc: "AI picks the best chart for this data", special: true },
-  { id: "bar",       label: "Bar chart",         icon: <BarChart2 size={16} />,    color: "#2bc4a0", border: "rgba(129,140,248,0.4)", bg: "rgba(99,102,241,0.08)",  desc: "Compare values across categories" },
+  { id: "recommend", label: "✦ Recommend for me", icon: <Sparkles size={16} />, color: "var(--accent-light)", border: "rgba(167,139,250,0.5)", bg: "var(--accent-dim)", desc: "AI picks the best chart for this data", special: true },
+  { id: "bar",       label: "Bar chart",         icon: <BarChart2 size={16} />,    color: "var(--accent)", border: "rgba(129,140,248,0.4)", bg: "rgba(99,102,241,0.08)",  desc: "Compare values across categories" },
   { id: "line",      label: "Line chart",        icon: <TrendingUp size={16} />,   color: "#60a5fa", border: "rgba(96,165,250,0.4)",  bg: "rgba(59,130,246,0.08)",  desc: "Show trends over time" },
-  { id: "pie",       label: "Pie chart",         icon: <PieChart size={16} />,     color: "#34d399", border: "rgba(52,211,153,0.4)",  bg: "rgba(16,185,129,0.08)",  desc: "Show proportions and shares" },
+  { id: "pie",       label: "Pie chart",         icon: <PieChart size={16} />,     color: "var(--green)", border: "rgba(52,211,153,0.4)",  bg: "rgba(16,185,129,0.08)",  desc: "Show proportions and shares" },
   { id: "scatter",   label: "Scatter plot",      icon: <ScatterChart size={16} />, color: "#fb923c", border: "rgba(251,146,60,0.4)",  bg: "rgba(249,115,22,0.08)",  desc: "Find correlations" },
   { id: "histogram", label: "Histogram",         icon: <Activity size={16} />,     color: "#f472b6", border: "rgba(244,114,182,0.4)", bg: "rgba(236,72,153,0.08)",  desc: "Show value distribution" },
   { id: "area",      label: "Area chart",        icon: <AreaChart size={16} />,    color: "#2dd4bf", border: "rgba(45,212,191,0.4)",  bg: "rgba(20,184,166,0.08)",  desc: "Cumulative values over time" },
@@ -34,7 +34,7 @@ Style rules (apply to every chart):
 - No legend if only one series
 - Tight margins: fig.update_layout(margin=dict(t=50,r=20,b=50,l=60))
 - Meaningful title (emoji optional, concise)
-- Use color_discrete_sequence=px.colors.qualitative.Bold or ['#2bc4a0','#34d399','#fb923c','#f472b6','#60a5fa']
+- Use color_discrete_sequence=px.colors.qualitative.Bold or ['var(--accent)','#34d399','#fb923c','#f472b6','#60a5fa']
 - Call fig.show() at the end
 `;
 
@@ -152,10 +152,10 @@ export default function ChartPickerModal({ dataset, conversationId, analysisCont
   const selectedType = CHART_TYPES.find(c => c.id === selected);
 
   return (
-    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+    <div className="modal-backdrop" style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)", padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-panel rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[88vh]"
-        style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+      <div className="modal-panel"
+        style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 16, width: "100%", maxWidth: 672, display: "flex", flexDirection: "column", maxHeight: "88vh", boxShadow: "0 25px 50px rgba(0,0,0,0.35)" }}>
 
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between px-6 py-4"
@@ -165,7 +165,7 @@ export default function ChartPickerModal({ dataset, conversationId, analysisCont
             <h2 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Create a chart</h2>
             {phase === "done" && recommendedType && selected === "recommend" && (
               <span className="text-[11px] px-2 py-0.5 rounded-full font-medium"
-                style={{ background: "rgba(167,139,250,0.15)", color: "#33d9ab" }}>
+                style={{ background: "rgba(167,139,250,0.15)", color: "var(--accent-light)" }}>
                 AI chose: {recommendedType}
               </span>
             )}
@@ -180,47 +180,72 @@ export default function ChartPickerModal({ dataset, conversationId, analysisCont
             <>
               {/* Recommend card — prominent */}
               <button onClick={() => generate("recommend")}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all hover:scale-[1.01]"
-                style={{ background: "linear-gradient(135deg, rgba(0,200,150,0.15), rgba(79,70,229,0.1))", border: "2px solid rgba(0,200,150,0.4)" }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: "rgba(0,200,150,0.2)" }}>
-                  <Sparkles size={20} style={{ color: "#33d9ab" }} />
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", gap: 16,
+                  padding: "14px 16px", borderRadius: 14, textAlign: "left",
+                  background: "var(--surface)", border: "1.5px solid var(--border-accent)",
+                  cursor: "pointer", transition: "border-color 140ms ease, box-shadow 140ms ease",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 20px var(--accent-glow)"; e.currentTarget.style.borderColor = "var(--accent)"; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "var(--border-accent)"; }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "var(--accent-dim)", border: "1px solid var(--border-accent)",
+                }}>
+                  <Sparkles size={18} style={{ color: "var(--accent)" }} />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-sm font-bold" style={{ color: "#6ee7b7" }}>✦ Recommend for me</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-                      style={{ background: "rgba(167,139,250,0.2)", color: "#33d9ab" }}>AI powered</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>Recommend for me</span>
+                    <span style={{
+                      fontSize: 10, padding: "2px 7px", borderRadius: 20, fontWeight: 600,
+                      background: "var(--accent-dim)", color: "var(--accent)", border: "1px solid var(--border-accent)",
+                    }}>AI</span>
                   </div>
-                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    brAIn analyses your data and picks the most insightful chart type automatically
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
+                    brAIn picks the most insightful chart type for your data automatically
                   </p>
                 </div>
-                <span className="text-lg">→</span>
+                <span style={{ color: "var(--accent)", fontSize: 18, flexShrink: 0 }}>→</span>
               </button>
 
               {/* Divider */}
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>or choose manually</span>
-                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", color: "var(--text-dim)", textTransform: "uppercase" }}>or choose manually</span>
+                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
               </div>
 
               {/* Manual chart types */}
-              <div className="grid grid-cols-3 gap-2">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                 {CHART_TYPES.filter(c => !c.special).map(ct => (
                   <button key={ct.id} onClick={() => generate(ct.id)}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl text-center transition-all hover:scale-[1.02]"
-                    style={{ background: ct.bg, border: `1.5px solid ${ct.border}` }}>
+                    style={{
+                      display: "flex", flexDirection: "column", alignItems: "center",
+                      gap: 7, padding: "14px 10px", borderRadius: 12, textAlign: "center",
+                      background: "var(--surface)", border: `1.5px solid var(--border)`,
+                      cursor: "pointer", transition: "border-color 130ms ease, background 130ms ease, transform 130ms ease",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = ct.border;
+                      e.currentTarget.style.background = ct.bg;
+                      e.currentTarget.style.transform = "translateY(-1px)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = "var(--border)";
+                      e.currentTarget.style.background = "var(--surface)";
+                      e.currentTarget.style.transform = "translateY(0)";
+                    }}>
                     <span style={{ color: ct.color }}>{ct.icon}</span>
-                    <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>{ct.label}</span>
-                    <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>{ct.desc}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{ct.label}</span>
+                    <span style={{ fontSize: 10, color: "var(--text-dim)", lineHeight: 1.4 }}>{ct.desc}</span>
                   </button>
                 ))}
               </div>
 
               {phase === "error" && (
-                <div className="px-3 py-2 rounded-lg text-xs" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+                <div style={{ padding: "8px 12px", borderRadius: 8, fontSize: 12, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
                   {errorMsg}
                 </div>
               )}
@@ -231,9 +256,9 @@ export default function ChartPickerModal({ dataset, conversationId, analysisCont
           {phase === "generating" && (
             <div className="flex flex-col items-center gap-5 py-12">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ background: selected === "recommend" ? "rgba(0,200,150,0.15)" : `${selectedType?.bg}`, border: `2px solid ${selected === "recommend" ? "rgba(0,200,150,0.4)" : selectedType?.border}` }}>
+                style={{ background: selected === "recommend" ? "var(--accent-dim)" : `${selectedType?.bg}`, border: `2px solid ${selected === "recommend" ? "var(--border-accent)" : selectedType?.border}` }}>
                 {selected === "recommend"
-                  ? <Sparkles size={24} className="animate-pulse" style={{ color: "#33d9ab" }} />
+                  ? <Sparkles size={24} className="animate-pulse" style={{ color: "var(--accent-light)" }} />
                   : <span style={{ color: selectedType?.color }}>{selectedType?.icon}</span>}
               </div>
               <div className="text-center">
@@ -276,7 +301,7 @@ export default function ChartPickerModal({ dataset, conversationId, analysisCont
                 />
                 <button onClick={handleSave} disabled={saving || saved || !title}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-40 hover:opacity-90 transition-all shrink-0"
-                  style={{ background: "linear-gradient(135deg,#00c896,#059669)" }}>
+                  style={{ background: "linear-gradient(135deg,var(--accent),var(--accent2))" }}>
                   {saving ? <AISpinner size={13} /> : saved ? <Check size={13} /> : <BarChart2 size={13} />}
                   {saved ? "Saved!" : saving ? "Saving…" : "Save to Charts"}
                 </button>

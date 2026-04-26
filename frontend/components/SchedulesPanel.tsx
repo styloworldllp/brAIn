@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Trash2, Edit2, Check, X, ToggleLeft, ToggleRight, Mail, Clock, ChevronDown, ChevronRight } from "lucide-react";
 import { withAuthHeaders } from "@/lib/auth";
 
-const BASE = "http://localhost:8000/api";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
 interface Schedule {
   id:              string;
@@ -30,7 +30,7 @@ export default function SchedulesPanel({ refreshTrigger }: Props) {
   const [editForm, setEditForm]   = useState<Partial<Schedule>>({});
   const [expanded, setExpanded]   = useState<string | null>(null);
 
-  const load = () => fetch(`${BASE}/schedules/`, { headers: withAuthHeaders() }).then(r => r.json()).then(setSchedules).catch(() => {});
+  const load = () => fetch(`${BASE}/schedules/`, { headers: withAuthHeaders() }).then(r => r.json()).then(setSchedules).catch(e => console.error("Failed to load schedules:", e));
 
   useEffect(() => { load(); }, [refreshTrigger]);
 
@@ -64,9 +64,9 @@ export default function SchedulesPanel({ refreshTrigger }: Props) {
   if (schedules.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-36 gap-2 text-center px-3">
-        <Calendar size={20} className="text-[#2e3347]" />
-        <p className="text-[10px] text-[#3e4357]">No schedules yet</p>
-        <p className="text-[9px] text-[#2e3347]">Ask a question then click Schedule below the response</p>
+        <Calendar size={20} className="text-[var(--text-dim)]" />
+        <p className="text-[10px] text-[var(--text-dim)]">No schedules yet</p>
+        <p className="text-[9px] text-[var(--text-dim)]">Ask a question then click Schedule below the response</p>
       </div>
     );
   }
@@ -74,18 +74,18 @@ export default function SchedulesPanel({ refreshTrigger }: Props) {
   return (
     <div className="p-2 space-y-1.5">
       {schedules.map(s => (
-        <div key={s.id} className="rounded-lg border border-[#1e2235] overflow-hidden">
+        <div key={s.id} className="rounded-lg border border-[var(--border)] overflow-hidden">
           {/* Header row */}
           <div
             onClick={() => setExpanded(expanded === s.id ? null : s.id)}
-            className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#1a1d27] transition-colors"
+            className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[var(--surface3)] transition-colors"
           >
-            <Calendar size={11} className={s.active ? "text-blue-400" : "text-[#3e4357]"} />
+            <Calendar size={11} className={s.active ? "text-blue-400" : "text-[var(--text-dim)]"} />
             <div className="flex-1 min-w-0">
               {editingId === s.id ? (
                 <input
                   autoFocus
-                  className="w-full bg-[#0d0f1a] border border-[#00c896]/40 rounded px-1.5 py-0.5 text-[11px] text-[#e8eaf0] outline-none"
+                  className="w-full bg-[var(--bg)] border border-[var(--border-accent)] rounded px-1.5 py-0.5 text-[11px] text-[var(--text)] outline-none"
                   value={editForm.title || ""}
                   onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
                   onClick={e => e.stopPropagation()}
@@ -96,9 +96,9 @@ export default function SchedulesPanel({ refreshTrigger }: Props) {
                 </p>
               )}
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[9px] text-[#3e4357]">{CRON_LABELS[s.cron] || s.cron}</span>
-                <span className="text-[9px] text-[#2e3347]">·</span>
-                <span className={`text-[9px] ${s.active ? "text-green-400" : "text-[#3e4357]"}`}>
+                <span className="text-[9px] text-[var(--text-dim)]">{CRON_LABELS[s.cron] || s.cron}</span>
+                <span className="text-[9px] text-[var(--text-dim)]">·</span>
+                <span className={`text-[9px] ${s.active ? "text-green-400" : "text-[var(--text-dim)]"}`}>
                   {s.active ? "Active" : "Paused"}
                 </span>
               </div>
@@ -107,30 +107,30 @@ export default function SchedulesPanel({ refreshTrigger }: Props) {
               {editingId === s.id ? (
                 <>
                   <button onClick={() => saveEdit(s.id)} className="text-green-400 hover:text-green-300 p-0.5"><Check size={11} /></button>
-                  <button onClick={() => setEditingId(null)} className="text-[#3e4357] hover:text-[#8b90a8] p-0.5"><X size={11} /></button>
+                  <button onClick={() => setEditingId(null)} className="text-[var(--text-dim)] hover:text-[var(--text-muted)] p-0.5"><X size={11} /></button>
                 </>
               ) : (
                 <>
-                  <button onClick={() => toggle(s.id)} className="p-0.5 text-[#3e4357] hover:text-blue-400 transition-colors">
+                  <button onClick={() => toggle(s.id)} className="p-0.5 text-[var(--text-dim)] hover:text-blue-400 transition-colors">
                     {s.active ? <ToggleRight size={14} className="text-blue-400" /> : <ToggleLeft size={14} />}
                   </button>
-                  <button onClick={e => startEdit(s, e)} className="p-0.5 text-[#3e4357] hover:text-[#8b90a8]"><Edit2 size={10} /></button>
-                  <button onClick={e => del(s.id, e)} className="p-0.5 text-[#3e4357] hover:text-red-400"><Trash2 size={10} /></button>
+                  <button onClick={e => startEdit(s, e)} className="p-0.5 text-[var(--text-dim)] hover:text-[var(--text-muted)]"><Edit2 size={10} /></button>
+                  <button onClick={e => del(s.id, e)} className="p-0.5 text-[var(--text-dim)] hover:text-red-400"><Trash2 size={10} /></button>
                 </>
               )}
             </div>
-            {expanded === s.id ? <ChevronDown size={10} className="text-[#3e4357] shrink-0" /> : <ChevronRight size={10} className="text-[#3e4357] shrink-0" />}
+            {expanded === s.id ? <ChevronDown size={10} className="text-[var(--text-dim)] shrink-0" /> : <ChevronRight size={10} className="text-[var(--text-dim)] shrink-0" />}
           </div>
 
           {/* Expanded detail */}
           {expanded === s.id && (
-            <div className="px-3 pb-3 border-t border-[#1e2235] bg-[#0d0f1a] space-y-2 pt-2">
+            <div className="px-3 pb-3 border-t border-[var(--border)] bg-[var(--bg)] space-y-2 pt-2">
               {editingId === s.id ? (
                 <>
                   <div>
-                    <label className="text-[9px] text-[#3e4357] uppercase tracking-wider">Question</label>
+                    <label className="text-[9px] text-[var(--text-dim)] uppercase tracking-wider">Question</label>
                     <textarea
-                      className="w-full mt-0.5 bg-[#12141f] border border-[#1e2235] rounded px-2 py-1 text-[10px] text-[#c8cad8] outline-none focus:border-[#00c896]/40 resize-none"
+                      className="w-full mt-0.5 bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-[var(--text)] outline-none focus:border-[var(--border-accent)] resize-none"
                       rows={2}
                       value={editForm.question || ""}
                       onChange={e => setEditForm(f => ({ ...f, question: e.target.value }))}
@@ -138,9 +138,9 @@ export default function SchedulesPanel({ refreshTrigger }: Props) {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[9px] text-[#3e4357] uppercase tracking-wider">Frequency</label>
+                      <label className="text-[9px] text-[var(--text-dim)] uppercase tracking-wider">Frequency</label>
                       <select
-                        className="w-full mt-0.5 bg-[#12141f] border border-[#1e2235] rounded px-2 py-1 text-[10px] text-[#c8cad8] outline-none"
+                        className="w-full mt-0.5 bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-[var(--text)] outline-none"
                         value={editForm.cron || "daily"}
                         onChange={e => setEditForm(f => ({ ...f, cron: e.target.value }))}
                       >
@@ -150,9 +150,9 @@ export default function SchedulesPanel({ refreshTrigger }: Props) {
                       </select>
                     </div>
                     <div>
-                      <label className="text-[9px] text-[#3e4357] uppercase tracking-wider">Email</label>
+                      <label className="text-[9px] text-[var(--text-dim)] uppercase tracking-wider">Email</label>
                       <input
-                        className="w-full mt-0.5 bg-[#12141f] border border-[#1e2235] rounded px-2 py-1 text-[10px] text-[#c8cad8] outline-none focus:border-[#00c896]/40"
+                        className="w-full mt-0.5 bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-[var(--text)] outline-none focus:border-[var(--border-accent)]"
                         value={editForm.email || ""}
                         onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
                       />
@@ -162,17 +162,17 @@ export default function SchedulesPanel({ refreshTrigger }: Props) {
               ) : (
                 <>
                   <div className="flex items-start gap-1.5">
-                    <Mail size={9} className="text-[#3e4357] mt-0.5 shrink-0" />
-                    <p className="text-[10px] text-[#8b90a8]">{s.email}</p>
+                    <Mail size={9} className="text-[var(--text-dim)] mt-0.5 shrink-0" />
+                    <p className="text-[10px] text-[var(--text-muted)]">{s.email}</p>
                   </div>
-                  <div className="bg-[#12141f] rounded p-2">
-                    <p className="text-[9px] text-[#3e4357] mb-1">Question:</p>
-                    <p className="text-[10px] text-[#8b90a8] italic leading-relaxed">"{s.question}"</p>
+                  <div className="bg-[var(--surface)] rounded p-2">
+                    <p className="text-[9px] text-[var(--text-dim)] mb-1">Question:</p>
+                    <p className="text-[10px] text-[var(--text-muted)] italic leading-relaxed">"{s.question}"</p>
                   </div>
                   {s.last_run && (
                     <div className="flex items-center gap-1.5">
-                      <Clock size={9} className="text-[#3e4357]" />
-                      <p className="text-[9px] text-[#3e4357]">Last run: {new Date(s.last_run).toLocaleDateString()}</p>
+                      <Clock size={9} className="text-[var(--text-dim)]" />
+                      <p className="text-[9px] text-[var(--text-dim)]">Last run: {new Date(s.last_run).toLocaleDateString()}</p>
                     </div>
                   )}
                 </>

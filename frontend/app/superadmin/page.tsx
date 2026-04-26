@@ -7,10 +7,10 @@ import {
   EyeOff, ChevronDown, ChevronRight, UserPlus, AlertCircle, ArrowUpRight,
   Clock, TrendingUp, Package,
 } from "lucide-react";
-import { getToken, fetchMe, clearToken } from "@/lib/auth";
+import { getToken, fetchMe, logout } from "@/lib/auth";
 import { AISpinner } from "@/components/AISpinner";
 
-const BASE = "http://localhost:8000/api/superadmin";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api/superadmin";
 function hdrs() {
   return { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` };
 }
@@ -115,7 +115,7 @@ export default function SuperAdminPage() {
   const [selectedOrg, setSelectedOrg]   = useState<Org | null>(null);
   const [showCreate, setShowCreate]     = useState(false);
   const [showOrgDetail, setShowOrgDetail] = useState(false);
-  const [tab, setTab] = useState<"orgs" | "users" | "activity">("orgs");
+  const [tab, setTab] = useState<"orgs" | "users" | "activity" | "neurix">("orgs");
 
   const load = useCallback(async () => {
     setError("");
@@ -127,7 +127,7 @@ export default function SuperAdminPage() {
       ]);
 
       if (statsRes.status === 401 || statsRes.status === 403 || orgsRes.status === 401 || orgsRes.status === 403) {
-        clearToken();
+        await logout();
         router.replace("/login");
         return;
       }
@@ -236,7 +236,7 @@ export default function SuperAdminPage() {
           <span style={{ fontSize: 11, color: "#22c55e", fontWeight: 600 }}>Live</span>
         </div>
 
-        <button onClick={() => { clearToken(); router.replace("/login"); }}
+        <button onClick={() => { logout().then(() => router.replace("/login")); }}
           style={{ fontSize: 11, color: "#5a6285", background: "none", border: "none", cursor: "pointer" }}>
           Sign out
         </button>
@@ -286,7 +286,7 @@ export default function SuperAdminPage() {
             {/* Tabs */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <div style={{ display: "flex", gap: 2, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: 3 }}>
-                {([["orgs", <Building2 size={12} />, "Organizations"], ["users", <Users size={12} />, "All Users"], ["activity", <Activity size={12} />, "Activity"]] as const).map(([id, icon, label]) => (
+                {([["orgs", <Building2 size={12} />, "Organizations"], ["users", <Users size={12} />, "All Users"], ["activity", <Activity size={12} />, "Activity"], ["neurix", <Zap size={12} />, "Neurix"]] as const).map(([id, icon, label]) => (
                   <button key={id} onClick={() => setTab(id)}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
@@ -358,6 +358,7 @@ export default function SuperAdminPage() {
 
             {tab === "users" && <AllUsersTab load={load} />}
             {tab === "activity" && <ActivityTab items={activity} />}
+            {tab === "neurix" && <NeurixTab orgs={orgs} />}
           </div>
 
           {/* Right: activity / detail sidebar */}
@@ -895,6 +896,267 @@ function AllUsersTab({ load }: { load: () => void }) {
           </div>
         ))}
         {filtered.length === 0 && <p style={{ padding: "28px", textAlign: "center", fontSize: 13, color: "#3d4268" }}>No users found</p>}
+      </div>
+    </div>
+  );
+}
+
+// ── Neurix tab ─────────────────────────────────────────────────────────────────
+const NBASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api/neurix";
+function nhdrs() { return { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` }; }
+
+interface NInstance { id: string; organization_id: string; org_name: string; endpoint_url: string; model_name: string; is_active: boolean; notes: string | null; created_at: string; }
+interface NeuronInfo { org_id: string; org_name: string; neuron_balance: number; cost_per_query: number; transactions: Array<{ id: string; amount: number; balance_after: number; reason: string; reference_id: string | null; created_at: string; }>; }
+
+function NeurixTab({ orgs }: { orgs: Org[] }) {
+  const [instances, setInstances] = useState<NInstance[]>([]);
+  const [selectedOrg, setSelectedOrg] = useState<string>("");
+  const [neuronInfo, setNeuronInfo] = useState<NeuronInfo | null>(null);
+  const [topupAmount, setTopupAmount] = useState("");
+  const [topupReason, setTopupReason] = useState("topup");
+  const [topping, setTopping] = useState(false);
+  const [showNewInst, setShowNewInst] = useState(false);
+  const [newInst, setNewInst] = useState({ organization_id: "", endpoint_url: "", model_name: "llama3", notes: "" });
+  const [saving, setSaving] = useState(false);
+  const [pingResults, setPingResults] = useState<Record<string, { ok: boolean; latency_ms: number | null; mock: boolean; message?: string } | null>>({});
+  const [pinging, setPinging] = useState<string | null>(null);
+  const [testSetupOrg, setTestSetupOrg] = useState("");
+  const [settingUpTest, setSettingUpTest] = useState(false);
+  const [testSetupResult, setTestSetupResult] = useState<string | null>(null);
+
+  const loadInstances = () => fetch(`${NBASE}/instances`, { headers: nhdrs() }).then(r => r.json()).then(setInstances).catch(() => {});
+  const loadNeurons = (orgId: string) => {
+    if (!orgId) return;
+    fetch(`${NBASE}/orgs/${orgId}/neurons`, { headers: nhdrs() }).then(r => r.json()).then(setNeuronInfo).catch(() => {});
+  };
+
+  useEffect(() => { loadInstances(); }, []);
+  useEffect(() => { loadNeurons(selectedOrg); }, [selectedOrg]);
+
+  const handleTopup = async () => {
+    const amt = parseInt(topupAmount);
+    if (!selectedOrg || !amt || amt <= 0) return;
+    setTopping(true);
+    await fetch(`${NBASE}/orgs/${selectedOrg}/neurons/topup`, {
+      method: "POST", headers: nhdrs(),
+      body: JSON.stringify({ amount: amt, reason: topupReason }),
+    });
+    setTopping(false); setTopupAmount(""); loadNeurons(selectedOrg);
+  };
+
+  const handleDeleteInstance = async (id: string) => {
+    await fetch(`${NBASE}/instances/${id}`, { method: "DELETE", headers: nhdrs() });
+    loadInstances();
+  };
+
+  const handlePing = async (instId: string) => {
+    setPinging(instId);
+    const r = await fetch(`${NBASE}/instances/${instId}/ping`, { headers: nhdrs() }).then(x => x.json()).catch(() => ({ ok: false, message: "Request failed" }));
+    setPingResults(prev => ({ ...prev, [instId]: r }));
+    setPinging(null);
+  };
+
+  const handleTestSetup = async () => {
+    if (!testSetupOrg) return;
+    setSettingUpTest(true); setTestSetupResult(null);
+    const r = await fetch(`${NBASE}/test-setup`, {
+      method: "POST", headers: nhdrs(),
+      body: JSON.stringify({ org_id: testSetupOrg, neurons: 1000 }),
+    }).then(x => x.json()).catch(() => ({ ok: false }));
+    setSettingUpTest(false);
+    if (r.ok) {
+      setTestSetupResult(`✓ Mock instance created · 1,000 neurons added · endpoint: ${r.endpoint}`);
+      loadInstances();
+      if (testSetupOrg === selectedOrg) loadNeurons(selectedOrg);
+    } else {
+      setTestSetupResult("Setup failed — check console.");
+    }
+  };
+
+  const handleCreateInstance = async () => {
+    if (!newInst.organization_id || !newInst.endpoint_url) return;
+    setSaving(true);
+    await fetch(`${NBASE}/instances`, { method: "POST", headers: nhdrs(), body: JSON.stringify(newInst) });
+    setSaving(false); setShowNewInst(false); setNewInst({ organization_id: "", endpoint_url: "", model_name: "llama3", notes: "" }); loadInstances();
+  };
+
+  const toggleActive = async (inst: NInstance) => {
+    await fetch(`${NBASE}/instances/${inst.id}`, { method: "PATCH", headers: nhdrs(), body: JSON.stringify({ is_active: !inst.is_active }) });
+    loadInstances();
+  };
+
+  const inputSt: React.CSSProperties = { width: "100%", padding: "7px 10px", borderRadius: 8, fontSize: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#eceef8", outline: "none", boxSizing: "border-box" };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* Quick Test Setup */}
+      <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 14, padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <Zap size={14} style={{ color: "#f59e0b" }} />
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#f59e0b" }}>Quick Test Setup</p>
+          <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: "rgba(245,158,11,0.2)", color: "#fbbf24", fontWeight: 600 }}>No Ollama needed</span>
+        </div>
+        <p style={{ fontSize: 11, color: "#9ba3c8", marginBottom: 12, lineHeight: 1.5 }}>
+          Creates a <strong style={{ color: "#f59e0b" }}>mock Neurix instance</strong> for an organisation and adds 1,000 test neurons.
+          The mock mode runs real Python code execution and chart rendering — no local LLM required.
+        </p>
+        <div style={{ display: "flex", gap: 8 }}>
+          <select style={{ ...inputSt, flex: 1 }} value={testSetupOrg} onChange={e => setTestSetupOrg(e.target.value)}>
+            <option value="">Select organisation to test…</option>
+            {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+          <button onClick={handleTestSetup} disabled={!testSetupOrg || settingUpTest}
+            style={{ padding: "7px 18px", borderRadius: 8, background: "linear-gradient(135deg,#f59e0b,#d97706)", border: "none", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", opacity: settingUpTest ? 0.6 : 1, whiteSpace: "nowrap" }}>
+            {settingUpTest ? "Setting up…" : "Setup for Testing"}
+          </button>
+        </div>
+        {testSetupResult && (
+          <p style={{ fontSize: 11, color: testSetupResult.startsWith("✓") ? "#34d399" : "#f87171", marginTop: 8, fontFamily: "monospace" }}>{testSetupResult}</p>
+        )}
+      </div>
+
+      {/* Instances */}
+      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#eceef8" }}>Neurix Instances</p>
+            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#5a6285" }}>One local LLM instance per organisation</p>
+          </div>
+          <button onClick={() => setShowNewInst(v => !v)}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 9, fontSize: 12, fontWeight: 600, background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff", border: "none", cursor: "pointer" }}>
+            <Plus size={12} /> Add Instance
+          </button>
+        </div>
+
+        {showNewInst && (
+          <div style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(245,158,11,0.05)", display: "flex", flexDirection: "column", gap: 8 }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#f59e0b" }}>New Instance</p>
+            <select style={inputSt} value={newInst.organization_id} onChange={e => setNewInst(p => ({ ...p, organization_id: e.target.value }))}>
+              <option value="">Select organisation…</option>
+              {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+            <input style={inputSt} placeholder="Endpoint URL e.g. http://10.0.0.5:11434" value={newInst.endpoint_url} onChange={e => setNewInst(p => ({ ...p, endpoint_url: e.target.value }))} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <input style={inputSt} placeholder="Model name e.g. llama3" value={newInst.model_name} onChange={e => setNewInst(p => ({ ...p, model_name: e.target.value }))} />
+              <input style={inputSt} placeholder="Notes (optional)" value={newInst.notes} onChange={e => setNewInst(p => ({ ...p, notes: e.target.value }))} />
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowNewInst(false)} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#5a6285", fontSize: 12, cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleCreateInstance} disabled={saving || !newInst.organization_id || !newInst.endpoint_url}
+                style={{ flex: 2, padding: "7px 0", borderRadius: 8, border: "none", background: "#f59e0b", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", opacity: saving ? 0.6 : 1 }}>
+                {saving ? "Saving…" : "Create Instance"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {instances.length === 0 ? (
+          <div style={{ padding: "32px", textAlign: "center" }}>
+            <Zap size={24} style={{ color: "#3d4268", margin: "0 auto 8px" }} />
+            <p style={{ fontSize: 12, color: "#5a6285" }}>No instances configured yet — use Quick Test Setup above</p>
+          </div>
+        ) : instances.map(inst => {
+          const ping = pingResults[inst.id];
+          const isMock = inst.endpoint_url.startsWith("mock://");
+          return (
+            <div key={inst.id} style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#eceef8" }}>{inst.org_name}</span>
+                    <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: inst.is_active ? "rgba(0,200,150,0.15)" : "rgba(255,255,255,0.06)", color: inst.is_active ? "#00c896" : "#5a6285", fontWeight: 600 }}>
+                      {inst.is_active ? "active" : "inactive"}
+                    </span>
+                    {isMock && <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 4, background: "rgba(245,158,11,0.2)", color: "#fbbf24", fontWeight: 700, textTransform: "uppercase" }}>mock</span>}
+                    <span style={{ fontSize: 11, fontFamily: "monospace", color: "#f59e0b" }}>{inst.model_name}</span>
+                    {ping && (
+                      <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: ping.ok ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", color: ping.ok ? "#4ade80" : "#f87171", fontWeight: 600 }}>
+                        {ping.ok ? (ping.mock ? "✓ mock" : `✓ ${ping.latency_ms}ms`) : "✗ unreachable"}
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ margin: "3px 0 0", fontSize: 11, color: "#5a6285", fontFamily: "monospace" }}>{inst.endpoint_url}</p>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => handlePing(inst.id)} disabled={pinging === inst.id}
+                    style={{ padding: "5px 10px", borderRadius: 7, fontSize: 11, cursor: "pointer", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", color: "#f59e0b", opacity: pinging === inst.id ? 0.5 : 1 }}>
+                    {pinging === inst.id ? "…" : "Ping"}
+                  </button>
+                  <button onClick={() => toggleActive(inst)} style={{ padding: "5px 10px", borderRadius: 7, fontSize: 11, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#9ba3c8" }}>
+                    {inst.is_active ? "Disable" : "Enable"}
+                  </button>
+                  <button onClick={() => handleDeleteInstance(inst.id)} style={{ padding: "5px 8px", borderRadius: 7, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", cursor: "pointer" }}>
+                    <Trash2 size={11} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Neuron balance management */}
+      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, overflow: "hidden" }}>
+        <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#eceef8" }}>Neuron Balances</p>
+          <p style={{ margin: "2px 0 0", fontSize: 11, color: "#5a6285" }}>Top up and review per-organisation neuron ledger</p>
+        </div>
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }}>
+            <select style={inputSt} value={selectedOrg} onChange={e => setSelectedOrg(e.target.value)}>
+              <option value="">Select organisation…</option>
+              {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          </div>
+
+          {neuronInfo && (
+            <>
+              {/* Balance card */}
+              <div style={{ display: "flex", gap: 12, padding: "14px 16px", borderRadius: 12, background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(245,158,11,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Zap size={20} style={{ color: "#f59e0b" }} />
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#f59e0b", lineHeight: 1 }}>{neuronInfo.neuron_balance.toLocaleString()}</p>
+                  <p style={{ margin: "3px 0 0", fontSize: 11, color: "#9ba3c8" }}>{neuronInfo.org_name} · {neuronInfo.cost_per_query} neurons/query</p>
+                </div>
+              </div>
+
+              {/* Top-up form */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8 }}>
+                <input style={inputSt} type="number" min="1" placeholder="Amount e.g. 1000" value={topupAmount} onChange={e => setTopupAmount(e.target.value)} />
+                <select style={inputSt} value={topupReason} onChange={e => setTopupReason(e.target.value)}>
+                  <option value="topup">Manual top-up</option>
+                  <option value="trial">Trial grant</option>
+                  <option value="refund">Refund</option>
+                  <option value="stripe">Stripe payment</option>
+                </select>
+                <button onClick={handleTopup} disabled={topping || !topupAmount}
+                  style={{ padding: "7px 16px", borderRadius: 8, background: "#f59e0b", border: "none", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", opacity: topping ? 0.6 : 1 }}>
+                  {topping ? "…" : "Top Up"}
+                </button>
+              </div>
+
+              {/* Transaction ledger */}
+              {neuronInfo.transactions.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 200, overflowY: "auto" }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: "#3d4268", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 4 }}>Recent Transactions</p>
+                  {neuronInfo.transactions.map(t => (
+                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: t.amount > 0 ? "#34d399" : "#f87171", width: 72, textAlign: "right", flexShrink: 0 }}>
+                        {t.amount > 0 ? "+" : ""}{t.amount.toLocaleString()}
+                      </span>
+                      <span style={{ fontSize: 11, color: "#5a6285", flex: 1 }}>{t.reason}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "#9ba3c8" }}>{t.balance_after.toLocaleString()} left</span>
+                      <span style={{ fontSize: 10, color: "#3d4268" }}>{new Date(t.created_at).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
