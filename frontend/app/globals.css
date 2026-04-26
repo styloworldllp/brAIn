@@ -1,53 +1,630 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-:root {
-  --bg: #0f1117;
-  --surface: #1a1d27;
-  --surface2: #22263a;
-  --border: #2e3347;
-  --text: #e8eaf0;
-  --text-muted: #8b90a8;
-  --accent: #6c63ff;
-  --accent-light: #8b85ff;
-  --green: #22c55e;
-  --red: #ef4444;
-  --amber: #f59e0b;
+/* Tailwind v4 */
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════
+   brAIn Design System — CSS Variables
+   ═══════════════════════════════════════════════ */
+
+/* ── Dark — neutral charcoal (70% neutral · 20% brand · 10% accent) ── */
+:root, html, html.dark {
+  /* Surfaces — pure neutral, no green tint */
+  --bg:           #0d0d0f;
+  --surface:      #141416;
+  --surface2:     #111113;
+  --surface3:     #1c1c1f;
+  --surface4:     #242428;
+
+  /* Borders — neutral */
+  --border:        #242428;
+  --border2:       #2e2e34;
+  --border-accent: rgba(0,200,150,0.22);
+
+  /* Text — clean white hierarchy */
+  --text:         #f0f0f2;
+  --text-muted:   #8a8a94;
+  --text-dim:     #4e4e58;
+  --text-on-accent: #ffffff;
+
+  /* Brand accent — green used sparingly */
+  --accent:        #00c896;
+  --accent-light:  #2dd9a8;
+  --accent-dim:    rgba(0,200,150,0.09);
+  --accent-glow:   rgba(0,200,150,0.18);
+  --accent2:       #059669;
+  --accent2-light: #10b981;
+  --accent2-dim:   rgba(5,150,105,0.07);
+
+  --green:   #34d399;
+  --red:     #f87171;
+  --amber:   #fbbf24;
+  --blue:    #60a5fa;
+
+  --bubble-user-from: #00c896;
+  --bubble-user-to:   #059669;
+  --bubble-ai-bg:     #141416;
+  --bubble-ai-border: #242428;
+
+  --code-bg:       #0d0d0f;
+  --code-text:     #a8ffdf;
+  --table-head-bg: #1c1c1f;
+  --table-row-alt: #141416;
+  --number-color:  #2dd9a8;
+  --output-bg:     #0d0d0f;
+  --output-text:   #f0f0f2;
 }
 
-* { box-sizing: border-box; }
+/* ── Stylo Green — deep emerald night (clearly distinct from dark) ── */
+html.stylogreen {
+  /* Surfaces — rich green-tinted dark */
+  --bg:           #060d09;
+  --surface:      #0c1812;
+  --surface2:     #08110b;
+  --surface3:     #122018;
+  --surface4:     #1a2e22;
+
+  /* Borders — green-tinted */
+  --border:        rgba(0,200,150,0.14);
+  --border2:       rgba(0,200,150,0.24);
+  --border-accent: rgba(0,200,150,0.42);
+
+  /* Text — green-warm white hierarchy */
+  --text:         #e2f8ef;
+  --text-muted:   #5aba92;
+  --text-dim:     #2a6649;
+  --text-on-accent: #ffffff;
+
+  --accent:        #00c896;
+  --accent-light:  #34d399;
+  --accent-dim:    rgba(0,200,150,0.14);
+  --accent-glow:   rgba(0,200,150,0.30);
+  --accent2:       #059669;
+  --accent2-light: #10b981;
+  --accent2-dim:   rgba(5,150,105,0.12);
+
+  --green:   #22c55e;
+  --red:     #f87171;
+  --amber:   #fbbf24;
+  --blue:    #60a5fa;
+
+  --bubble-user-from: #00c896;
+  --bubble-user-to:   #059669;
+  --bubble-ai-bg:     #0c1812;
+  --bubble-ai-border: rgba(0,200,150,0.16);
+
+  --code-bg:       #040c07;
+  --code-text:     #6ee7b7;
+  --table-head-bg: rgba(0,200,150,0.09);
+  --table-row-alt: rgba(0,200,150,0.04);
+  --number-color:  #34d399;
+  --output-bg:     #060d09;
+  --output-text:   #e2f8ef;
+}
+
+/* ── Light — clean neutral whites (70% neutral · 20% brand · 10% accent) ── */
+html.light {
+  /* Surfaces — pure neutral, no green tint */
+  --bg:           #f8f8fa;
+  --surface:      #ffffff;
+  --surface2:     #f3f3f6;
+  --surface3:     #ebebee;
+  --surface4:     #e0e0e4;
+
+  /* Borders — neutral gray */
+  --border:        #e2e2e8;
+  --border2:       #d0d0d8;
+  --border-accent: rgba(0,168,118,0.28);
+
+  /* Text — near-black hierarchy */
+  --text:         #18181b;
+  --text-muted:   #62626c;
+  --text-dim:     #9898a4;
+  --text-on-accent: #ffffff;
+
+  --accent:        #00a876;
+  --accent-light:  #008f62;
+  --accent-dim:    rgba(0,168,118,0.08);
+  --accent-glow:   rgba(0,168,118,0.16);
+  --accent2:       #047857;
+  --accent2-light: #059669;
+  --accent2-dim:   rgba(4,120,87,0.06);
+
+  --green:   #059669;
+  --red:     #dc2626;
+  --amber:   #d97706;
+  --blue:    #2563eb;
+
+  --bubble-user-from: #00a876;
+  --bubble-user-to:   #047857;
+  --bubble-ai-bg:     #ffffff;
+  --bubble-ai-border: #e2e2e8;
+
+  --code-bg:       #18181b;
+  --code-text:     #6ee7b7;
+  --table-head-bg: #f3f3f6;
+  --table-row-alt: #f8f8fa;
+  --number-color:  #047857;
+  --output-bg:     #18181b;
+  --output-text:   #f0f0f2;
+}
+
+/* ═══════════════════════════════════════════════
+   Motion & Easing Tokens
+   ═══════════════════════════════════════════════ */
+:root {
+  --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ═══════════════════════════════════════════════
+   Base styles
+   ═══════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  margin: 0;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-/* Code block */
-pre {
-  background: #0d1117;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 16px;
-  overflow-x: auto;
-  font-family: "JetBrains Mono", "Fira Code", Menlo, monospace;
-  font-size: 13px;
+  background:  var(--bg);
+  color:       var(--text);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-feature-settings: "cv02","cv03","cv04","cv11";
+  font-size:   14px;
   line-height: 1.6;
+  margin:      0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-code {
+/* Light mode: make sidebar visually distinct */
+html.light aside { box-shadow: 1px 0 0 var(--border); }
+
+/* ── Tailwind dark class overrides — keep border/bg consistent ── */
+.dark\:border-neutral-700 { border-color: var(--border) !important; }
+.dark\:bg-neutral-800     { background-color: var(--surface) !important; }
+
+/* ── Global button press feedback ───────────────
+   Every pressable element should acknowledge the user.
+   scale(0.97) is subtle but compounds into "aliveness". */
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):hover { opacity: 0.9; }
+}
+button:not(:disabled):active { transform: scale(0.97); }
+button { transition: transform 160ms var(--ease-out), opacity 120ms ease; }
+
+/* Map Tailwind hardcoded values → CSS variables */
+.bg-\[\#0d0f1a\], .bg-\[\#0c0e1a\], .bg-\[\#0f1117\], .bg-\[\#0a0c15\], .bg-\[\#080a12\] { background-color: var(--bg) !important; }
+.bg-\[\#1a1d27\], .bg-\[\#171929\], .bg-\[\#1a1d2e\] { background-color: var(--surface) !important; }
+.bg-\[\#12141f\], .bg-\[\#111320\], .bg-\[\#141620\], .bg-\[\#12141f\] { background-color: var(--surface2) !important; }
+.bg-\[\#22263a\], .bg-\[\#1e2138\] { background-color: var(--surface3) !important; }
+.border-\[\#1e2235\], .border-\[\#272a3f\], .border-\[\#252838\] { border-color: var(--border) !important; }
+.border-\[\#2e3347\], .border-\[\#323659\], .border-\[\#2e3250\] { border-color: var(--border2) !important; }
+.text-\[\#e8eaf0\], .text-\[\#eceef8\], .text-\[\#f0f1f8\], .text-\[\#c8cad8\] { color: var(--text) !important; }
+.text-\[\#8b90a8\], .text-\[\#9ba3c8\], .text-\[\#9196b5\] { color: var(--text-muted) !important; }
+.text-\[\#3e4357\], .text-\[\#555d80\], .text-\[\#4a5080\], .text-\[\#2e3347\] { color: var(--text-dim) !important; }
+
+/* ═══════════════════════════════════════════════
+   Typography
+   ═══════════════════════════════════════════════ */
+h1, h2, h3, h4 { color: var(--text); font-weight: 700; margin: 0; }
+
+a { color: var(--accent-light); }
+html.light a { color: var(--accent); }
+
+/* ═══════════════════════════════════════════════
+   AI Response content
+   ═══════════════════════════════════════════════ */
+.ai-response {
+  font-size:   14px;
+  line-height: 1.8;
+  color:       var(--text);
+}
+.ai-response p       { margin: 0 0 8px; }
+.ai-response strong  { font-weight: 650; color: var(--text); }
+.ai-response em      { color: var(--text-muted); }
+.ai-response h1 { font-size: 17px; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin: 16px 0 8px; }
+.ai-response h2 { font-size: 14px; font-weight: 700; color: var(--accent-light); margin: 14px 0 5px; }
+.ai-response h3 { font-size: 13px; font-weight: 600; color: var(--accent-light); margin: 10px 0 4px; }
+.ai-response code {
+  background: var(--accent-dim);
+  color:      var(--accent-light);
+  padding:    1px 6px;
+  border-radius: 4px;
+  font-size:  12px;
   font-family: "JetBrains Mono", "Fira Code", Menlo, monospace;
-  font-size: 13px;
 }
 
-/* Plotly chart background fix */
-.js-plotly-plot .plotly .bg {
-  fill: transparent !important;
+/* ═══════════════════════════════════════════════
+   Tables
+   ═══════════════════════════════════════════════ */
+.ai-table-wrap {
+  margin:        12px 0;
+  border-radius: 12px;
+  overflow:      hidden;
+  border:        1px solid var(--border);
+  overflow-x:    auto;
+}
+.ai-table {
+  width:           100%;
+  border-collapse: collapse;
+  font-size:       13px;
+}
+.ai-table thead tr    { background: var(--table-head-bg); border-bottom: 1px solid var(--border); }
+.ai-table thead th    { padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12px; color: var(--accent-light); letter-spacing: .02em; white-space: nowrap; }
+.ai-table tbody tr:nth-child(even) { background: var(--table-row-alt); }
+.ai-table tbody td    { padding: 8px 14px; color: var(--text); border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.ai-table tbody tr:last-child td { border-bottom: none; }
+.ai-table td.numeric  { color: var(--number-color); font-weight: 500; }
+
+/* ═══════════════════════════════════════════════
+   Code & Output blocks
+   ═══════════════════════════════════════════════ */
+pre, code { font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace; }
+
+.code-block-pre {
+  margin:        0;
+  background:    var(--code-bg);
+  color:         var(--code-text);
+  font-size:     12.5px;
+  line-height:   1.65;
+  padding:       12px 16px;
+  overflow-x:    auto;
+}
+.output-block-pre {
+  margin:        0;
+  background:    var(--output-bg);
+  color:         var(--output-text);
+  font-size:     12.5px;
+  line-height:   1.65;
+  padding:       12px 16px;
+  white-space:   pre-wrap;
+  font-family:   "JetBrains Mono", Menlo, monospace;
+}
+
+/* ═══════════════════════════════════════════════
+   Scrollbars
+   ═══════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ═══════════════════════════════════════════════
+   Inputs & Selects — global consistent style
+   ═══════════════════════════════════════════════ */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,
+select {
+  background:    var(--surface3);
+  color:         var(--text);
+  border:        1px solid var(--border2);
+  border-radius: 8px;
+  font-size:     13px;
+  font-family:   inherit;
+  outline:       none;
+  transition:    border-color 150ms ease, box-shadow 150ms ease;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent) !important;
+  box-shadow:   0 0 0 3px var(--accent-dim) !important;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-dim);
+}
+/* Light mode: use white surface for inputs */
+html.light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.light textarea,
+html.light select {
+  background: var(--surface);
+  border-color: var(--border2);
+}
+select option {
+  background: var(--surface2);
+  color:      var(--text);
+}
+
+/* ═══════════════════════════════════════════════
+   Plotly
+   ═══════════════════════════════════════════════ */
+.js-plotly-plot .plotly .bg { fill: transparent !important; }
+
+/* ═══════════════════════════════════════════════
+   Pulse animation for streaming cursor
+   ═══════════════════════════════════════════════ */
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.streaming-cursor { animation: blink 1s step-end infinite; }
+
+/* ═══════════════════════════════════════════════
+   Animation keyframes
+   ═══════════════════════════════════════════════ */
+
+/* Entry: elements appear from slightly below — nothing materialises from nowhere */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* Modal panel: scale from 0.95 — like a balloon that has visible shape even deflated */
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+/* Backdrop fade */
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Modal animation classes ─────────────────── */
+.modal-backdrop {
+  animation: backdropIn 200ms var(--ease-out) forwards;
+}
+.modal-panel {
+  animation: modalIn 220ms var(--ease-out) forwards;
+}
+
+/* ── Stagger utilities (applied via inline style --i) ── */
+.stagger-item {
+  opacity: 0;
+  animation: fadeSlideUp 280ms var(--ease-out) forwards;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+/* ═══════════════════════════════════════════════
+   Loading & AI State Animations
+   ═══════════════════════════════════════════════ */
+
+/* ── Gradient ring spinner — replaces every plain Loader2 ── */
+@keyframes spinRing {
+  to { transform: rotate(360deg); }
+}
+.ai-spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  border-right-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--accent) 20%, transparent);
+  animation: spinRing 560ms linear infinite;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.ai-spinner-sm { width: 14px; height: 14px; }
+.ai-spinner-md { width: 20px; height: 20px; border-width: 2.5px; }
+.ai-spinner-lg { width: 32px; height: 32px; border-width: 3px; }
+
+/* ── AI thinking dots — pulse when waiting for first token ── */
+@keyframes thinkDot {
+  0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; }
+  40%           { transform: scale(1);   opacity: 1;   }
+}
+.think-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 0;
+}
+.think-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  animation: thinkDot 1.3s ease-in-out infinite;
+}
+.think-dot:nth-child(2) { animation-delay: 160ms; }
+.think-dot:nth-child(3) { animation-delay: 320ms; }
+
+/* ── Skeleton shimmer — for loading placeholders ── */
+@keyframes skeletonShimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface3) 25%, var(--surface2) 50%, var(--surface3) 75%);
+  background-size: 200% auto;
+  border-radius: 6px;
+  animation: skeletonShimmer 1.6s linear infinite;
+}
+
+/* ── AI orb radiance — pulsing rings while generating ── */
+@keyframes orbRadiance {
+  0%   { box-shadow: 0 0 0 0 var(--accent-glow), 0 0 0 0 var(--accent-dim); }
+  70%  { box-shadow: 0 0 0 14px transparent, 0 0 0 28px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
+}
+.ai-orb { animation: orbRadiance 1.6s ease-out infinite; }
+
+/* ── Stream cursor — gradient pulse instead of solid blink ── */
+@keyframes streamPulse {
+  0%, 100% { opacity: 1;   transform: scaleY(1); }
+  50%       { opacity: 0.3; transform: scaleY(0.6); }
+}
+.stream-cursor {
+  display: inline-block;
+  width: 3px; height: 16px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-light));
+  border-radius: 2px;
+  margin-left: 3px;
+  vertical-align: middle;
+  animation: streamPulse 750ms ease-in-out infinite;
+}
+
+/* ── Animated gradient text for AI branding ── */
+@keyframes gradientTextShift {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+.ai-gradient-text {
+  background: linear-gradient(90deg, var(--accent), var(--accent-light), var(--green), var(--accent));
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientTextShift 3s ease infinite;
+}
+
+/* ── Gentle float — for decorative hero icons (seen rarely, worth the delight) ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-7px); }
+}
+.float-icon { animation: float 3.2s ease-in-out infinite; }
+
+/* ── Logo glow pulse — subtle brand anchor, non-distracting ── */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50%       { box-shadow: 0 0 18px 5px var(--accent-glow); }
+}
+.logo-glow { animation: glowPulse 2.8s ease-in-out infinite; }
+
+/* ── Message enter — every new message slides in, feels purposeful ── */
+.msg-enter { animation: fadeSlideUp 240ms var(--ease-out) both; }
+
+/* ── Hover lift — cards feel pressable, not flat ── */
+.hover-lift {
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+  }
+}
+
+/* ── CTA button shimmer — gradient shifts on hover, feels alive ── */
+.btn-cta {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent) 100%);
+  background-size: 200% auto;
+  transition: background-position 400ms var(--ease-out), transform 160ms var(--ease-out), box-shadow 200ms var(--ease-out) !important;
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-cta:hover {
+    background-position: right center;
+    box-shadow: 0 4px 18px var(--accent-glow);
+  }
+}
+.btn-cta:active { transform: scale(0.97) !important; }
+
+/* ── Pill hover — suggestion pills scale up slightly on hover ── */
+@media (hover: hover) and (pointer: fine) {
+  .pill-hover:hover { transform: scale(1.03); }
+}
+.pill-hover { transition: transform 150ms var(--ease-out), border-color 150ms var(--ease-out), color 150ms var(--ease-out), background 150ms var(--ease-out); }
+
+/* ── Reduced motion: keep opacity changes, remove movement ── */
+@media (prefers-reduced-motion: reduce) {
+  .stagger-item    { animation: none; opacity: 1; }
+  .modal-panel     { animation: none; }
+  .modal-backdrop  { animation: none; }
+  .float-icon      { animation: none; }
+  .logo-glow       { animation: none; }
+  .msg-enter       { animation: none; }
+  .hover-lift      { transition: none; }
+  .btn-cta         { transition: opacity 120ms ease !important; }
+  .ai-spinner      { animation: none; border-color: var(--accent); border-right-color: transparent; }
+  .think-dot       { animation: none; opacity: 1; transform: none; }
+  .skeleton        { animation: none; }
+  .ai-orb          { animation: none; }
+  .stream-cursor   { animation: none; }
+  .ai-gradient-text { animation: none; -webkit-text-fill-color: var(--accent-light); }
+  button           { transition: opacity 120ms ease; }
+  button:active    { transform: none; }
+  *                { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   Mobile App & Responsive
+   ═══════════════════════════════════════════════ */
+
+/* Safe area tokens — notch, Dynamic Island, home indicator */
+:root {
+  --safe-top:     env(safe-area-inset-top,    0px);
+  --safe-bottom:  env(safe-area-inset-bottom, 0px);
+  --safe-left:    env(safe-area-inset-left,   0px);
+  --safe-right:   env(safe-area-inset-right,  0px);
+  --mobile-header-h: 52px;
+  --bottom-nav-h:    60px;
+}
+
+/* Dynamic viewport — compensates for mobile browser chrome */
+html, body { height: 100%; }
+
+/* Remove blue flash on tap (iOS/Android) */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Prevent pull-to-refresh fighting with our scroll areas */
+html { overscroll-behavior-y: none; }
+
+/* iOS: prevent zoom-on-focus for inputs smaller than 16px */
+@media (pointer: coarse) {
+  input, textarea, select {
+    font-size: 16px !important;
+    /* override the 13px default so iOS doesn't zoom */
+  }
+}
+
+/* Bottom nav */
+.mobile-nav {
+  display: flex;
+  align-items: stretch;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-bottom);
+  flex-shrink: 0;
+}
+.mobile-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  min-height: 56px;
+  transition: color 150ms ease;
+}
+.mobile-nav-pill {
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 2px;
+  border-radius: 0 0 3px 3px;
+  background: var(--accent);
+}
+.mobile-nav-label { font-size: 10px; font-weight: 500; }
+
+/* Mobile drawer */
+@keyframes drawerBgIn  { from { opacity: 0;    } to { opacity: 1;    } }
+@keyframes drawerBgOut { from { opacity: 1;    } to { opacity: 0;    } }
+@keyframes drawerIn    { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+.drawer-backdrop {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: drawerBgIn 220ms var(--ease-out) both;
+}
+.drawer-panel {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: min(300px, 88vw);
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface2);
+  border-right: 1px solid var(--border);
+  box-shadow: 6px 0 40px rgba(0, 0, 0, 0.4);
+  animation: drawerIn 260ms var(--ease-drawer) both;
+  padding-top: var(--safe-top);
+  overflow: hidden;
 }

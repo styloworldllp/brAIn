@@ -100,7 +100,7 @@ cd ..
 echo ""
 echo -e "${YELLOW}Installing Node.js dependencies…${NC}"
 cd frontend
-npm install --legacy-peer-deps --silent
+npm install --registry https://registry.npmmirror.com --legacy-peer-deps --silent
 echo -e "${GREEN}✓ Node packages installed${NC}"
 cd ..
 
