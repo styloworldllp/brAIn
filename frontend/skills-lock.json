@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "emil-design-eng": {
+      "source": "git@github.com:emilkowalski/skill.git",
+      "sourceType": "git",
+      "computedHash": "8bdf9e4e6de7a4969147bf4828a4ad2c5aacd9fba4b690b250a85e0467ca387d"
+    }
+  }
+}
