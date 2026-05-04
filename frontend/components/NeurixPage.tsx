@@ -4,6 +4,7 @@ import { Plus, BookOpen, Trash2, BarChart2, TrendingUp, Users, Clock, ChevronRig
 import { AISpinner } from "./AISpinner";
 import NotebookEditor from "./NotebookEditor";
 import { withAuthHeaders } from "@/lib/auth";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
@@ -17,6 +18,7 @@ const TEMPLATE_META: Record<string, { icon: React.ReactNode; gradient: string; d
 };
 
 export default function NeurixPage() {
+  const isMobile = useIsMobile();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [loading, setLoading]     = useState(false);
@@ -66,25 +68,25 @@ export default function NeurixPage() {
     <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
 
       {/* Header */}
-      <div style={{ padding: "20px 28px 18px", borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
+      <div style={{ padding: isMobile ? "14px 16px 12px" : "20px 28px 18px", borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,var(--accent),var(--accent2))", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px var(--accent-glow)" }}>
+            <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,var(--accent),var(--accent2))", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px var(--accent-glow)", flexShrink: 0 }}>
               <BookOpen size={17} style={{ color: "#fff" }} />
             </div>
             <div>
               <h1 style={{ fontSize: 17, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.3px" }}>Notebooks</h1>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Structured analysis with code, charts, and notes</p>
+              {!isMobile && <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Structured analysis with code, charts, and notes</p>}
             </div>
           </div>
           <button onClick={createBlank} disabled={loading}
-            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 18px", borderRadius: 10, background: "linear-gradient(135deg,var(--accent),var(--accent2))", color: "#fff", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer", boxShadow: "0 2px 10px var(--accent-glow)", opacity: loading ? 0.7 : 1 }}>
-            {loading ? <AISpinner size={14} /> : <Plus size={14} />} New Notebook
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: isMobile ? "8px 14px" : "8px 18px", borderRadius: 10, background: "linear-gradient(135deg,var(--accent),var(--accent2))", color: "#fff", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer", boxShadow: "0 2px 10px var(--accent-glow)", opacity: loading ? 0.7 : 1, whiteSpace: "nowrap", flexShrink: 0 }}>
+            {loading ? <AISpinner size={14} /> : <Plus size={14} />} {isMobile ? "New" : "New Notebook"}
           </button>
         </div>
       </div>
 
-      <div style={{ padding: "28px 28px" }}>
+      <div style={{ padding: isMobile ? "16px 14px" : "28px 28px" }}>
 
         {/* Templates */}
         {templates.length > 0 && (
@@ -131,17 +133,22 @@ export default function NeurixPage() {
                 Your notebooks ({notebooks.length})
               </p>
             </div>
-            <div style={{ overflowX: "auto" }}>
-            <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid var(--border)", background: "var(--surface)", minWidth: 460 }}>
-              {/* List header */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 130px 120px 48px", padding: "9px 18px", background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
-                {["Title", "Template", "Last updated", ""].map(h => (
-                  <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
-                ))}
+            {isMobile ? (
+              <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid var(--border)", background: "var(--surface)" }}>
+                {notebooks.map((nb, idx) => <NotebookRow key={nb.id} nb={nb} isLast={idx === notebooks.length - 1} isMobile onOpen={() => setOpenId(nb.id)} onDelete={e => deleteNotebook(e, nb.id)} />)}
               </div>
-              {notebooks.map((nb, idx) => <NotebookRow key={nb.id} nb={nb} isLast={idx === notebooks.length - 1} onOpen={() => setOpenId(nb.id)} onDelete={e => deleteNotebook(e, nb.id)} />)}
-            </div>
-            </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+              <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid var(--border)", background: "var(--surface)", minWidth: 460 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 130px 120px 48px", padding: "9px 18px", background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
+                  {["Title", "Template", "Last updated", ""].map(h => (
+                    <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
+                  ))}
+                </div>
+                {notebooks.map((nb, idx) => <NotebookRow key={nb.id} nb={nb} isLast={idx === notebooks.length - 1} isMobile={false} onOpen={() => setOpenId(nb.id)} onDelete={e => deleteNotebook(e, nb.id)} />)}
+              </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -168,8 +175,26 @@ export default function NeurixPage() {
   );
 }
 
-function NotebookRow({ nb, isLast, onOpen, onDelete }: { nb: Notebook; isLast: boolean; onOpen: () => void; onDelete: (e: React.MouseEvent) => void }) {
+function NotebookRow({ nb, isLast, isMobile, onOpen, onDelete }: { nb: Notebook; isLast: boolean; isMobile: boolean; onOpen: () => void; onDelete: (e: React.MouseEvent) => void }) {
   const [hover, setHover] = useState(false);
+
+  if (isMobile) return (
+    <div onClick={onOpen} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: isLast ? "none" : "1px solid var(--border)", cursor: "pointer", background: "transparent" }}>
+      <div style={{ width: 34, height: 34, borderRadius: 9, background: "var(--accent-dim)", border: "1px solid var(--border-accent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <BookOpen size={14} style={{ color: "var(--accent)" }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text)", margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nb.title}</p>
+        <p style={{ fontSize: 10, color: "var(--text-dim)", margin: 0, textTransform: "capitalize" }}>
+          {nb.template === "blank" ? "Blank" : nb.template} · {new Date(nb.updated_at).toLocaleDateString()}
+        </p>
+      </div>
+      <button onClick={onDelete} style={{ padding: 8, borderRadius: 6, background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", flexShrink: 0, display: "flex" }}>
+        <Trash2 size={15} />
+      </button>
+    </div>
+  );
+
   return (
     <div onClick={onOpen} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{ display: "grid", gridTemplateColumns: "1fr 130px 120px 48px", padding: "13px 18px", alignItems: "center", cursor: "pointer", background: hover ? "var(--accent-dim)" : "transparent", borderBottom: isLast ? "none" : "1px solid var(--border)", transition: "background 100ms ease" }}>

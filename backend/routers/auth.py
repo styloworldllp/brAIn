@@ -7,7 +7,7 @@ import bcrypt as _bcrypt
 from collections import defaultdict
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -276,6 +276,9 @@ def oauth_start(provider: str):
                 "response_type": "code", "scope": cfg["scope"], "state": state}
     if provider == "apple":
         params["response_mode"] = "form_post"
+    if provider == "google":
+        params["access_type"] = "offline"
+        params["prompt"]      = "select_account"
     url = cfg["auth_url"] + "?" + urllib.parse.urlencode(params)
     return RedirectResponse(url)
 
@@ -367,3 +370,143 @@ async def oauth_callback(provider: str, request: Request, db: Session = Depends(
 
     token = make_token(user.id, user.email)
     return RedirectResponse(f"{safe_frontend}/login?token={token}")
+
+
+# ── Gmail data-connector OAuth (popup-based, separate from login) ───────────
+
+_gmail_conn_states: dict[str, float]  = {}  # state -> issued_at
+_gmail_access_tokens: dict[str, dict] = {}  # key   -> {access_token, email, exp}
+
+_GMAIL_SCOPES = " ".join([
+    "openid",
+    "email",
+    "profile",
+    "https://www.googleapis.com/auth/gmail.readonly",
+])
+
+
+@router.get("/oauth/gmail-connector")
+def gmail_connector_start(request: Request):
+    """
+    Initiate a Gmail OAuth popup for the data connector.
+    Returns a redirect to Google consent screen; the callback closes the popup
+    and uses postMessage to deliver the token key to the opener window.
+    """
+    import urllib.parse
+    cfg = OAUTH_CFG.get("google", {})
+    if not cfg.get("client_id"):
+        return HTMLResponse(
+            "<script>"
+            "window.opener&&window.opener.postMessage("
+            "{type:'gmail_error',msg:'Google OAuth not configured — add GOOGLE_CLIENT_ID to backend/.env'},"
+            f"'{FRONTEND}');"
+            "window.close();"
+            "</script>",
+            status_code=200,
+        )
+    state    = secrets.token_urlsafe(32)
+    _gmail_conn_states[state] = time.time()
+    redirect = f"{BACKEND}/api/auth/oauth/gmail-connector/callback"
+    params   = {
+        "client_id":     cfg["client_id"],
+        "redirect_uri":  redirect,
+        "response_type": "code",
+        "scope":         _GMAIL_SCOPES,
+        "state":         state,
+        "access_type":   "offline",
+        "prompt":        "consent select_account",
+    }
+    url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
+    return RedirectResponse(url)
+
+
+@router.get("/oauth/gmail-connector/callback")
+async def gmail_connector_callback(request: Request):
+    """
+    Exchanges the Gmail OAuth code for an access token, stores it under a
+    short-lived key, then closes the popup and postMessages the key back to
+    the opener (ConnectorsPage).
+    """
+    import httpx
+
+    def _err(msg: str) -> HTMLResponse:
+        safe = msg.replace("'", "\\'")
+        return HTMLResponse(
+            "<script>"
+            "window.opener&&window.opener.postMessage("
+            f"{{type:'gmail_error',msg:'{safe}'}},"
+            f"'{FRONTEND}');"
+            "window.close();"
+            "</script>"
+        )
+
+    code  = request.query_params.get("code", "")
+    state = request.query_params.get("state", "")
+    error = request.query_params.get("error", "")
+
+    if error or not code:
+        return _err(error or "access_denied")
+
+    issued_at = _gmail_conn_states.pop(state, None)
+    if issued_at is None or (time.time() - issued_at) > 600:
+        return _err("invalid_state")
+
+    cfg          = OAUTH_CFG["google"]
+    redirect_uri = f"{BACKEND}/api/auth/oauth/gmail-connector/callback"
+
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            cfg["token_url"],
+            data={
+                "client_id":     cfg["client_id"],
+                "client_secret": cfg["client_secret"],
+                "code":          code,
+                "redirect_uri":  redirect_uri,
+                "grant_type":    "authorization_code",
+            },
+            headers={"Accept": "application/json"},
+        )
+        if token_resp.status_code != 200:
+            return _err("token_exchange_failed")
+
+        token_data   = token_resp.json()
+        access_token = token_data.get("access_token", "")
+
+        info_resp = await client.get(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        gmail_email = info_resp.json().get("email", "") if info_resp.status_code == 200 else ""
+
+    key = secrets.token_urlsafe(24)
+    _gmail_access_tokens[key] = {
+        "access_token": access_token,
+        "email":        gmail_email,
+        "exp":          time.time() + 300,   # 5-minute window to complete the form
+    }
+
+    safe_email = gmail_email.replace("'", "\\'")
+    return HTMLResponse(
+        f"<html><body><p>Connecting Gmail…</p><script>"
+        f"var msg={{type:'gmail_connected',key:'{key}',email:'{safe_email}'}};"
+        f"if(window.opener){{window.opener.postMessage(msg,'{FRONTEND}');window.close();}}"
+        f"else{{window.location.href='{FRONTEND}?gmail_key='+encodeURIComponent('{key}');}}"
+        f"</script></body></html>"
+    )
+
+
+@router.get("/gmail-token/{key}")
+def exchange_gmail_token(key: str, user: User = Depends(require_brain_access)):
+    """
+    One-time exchange: frontend hands over the key it received via postMessage
+    and gets back the Gmail access token + connected email address.
+    Key is consumed on first use.
+    """
+    data = _gmail_access_tokens.get(key)
+    if not data:
+        raise HTTPException(404, "Token key not found or already used")
+    if time.time() > data["exp"]:
+        _gmail_access_tokens.pop(key, None)
+        raise HTTPException(410, "Gmail token expired — please reconnect")
+    _gmail_access_tokens.pop(key)
+    return {"access_token": data["access_token"], "email": data["email"]}

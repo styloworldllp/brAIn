@@ -1,12 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Database, FileText, Shield, EyeOff, ChevronDown, ChevronRight, AlertTriangle, ShieldAlert, RotateCcw } from "lucide-react";
+import { Database, FileText, Shield, EyeOff, ChevronDown, ChevronRight, AlertTriangle, ShieldAlert, RotateCcw, X } from "lucide-react";
 import { AISpinner } from "./AISpinner";
 import { Dataset } from "@/lib/api";
 import { withAuthHeaders } from "@/lib/auth";
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
-interface Props { dataset: Dataset | null; }
+interface Props { dataset: Dataset | null; sheetMode?: boolean; onClose?: () => void; }
 interface PIIInfo { is_pii: boolean; category: string | null; severity: "high" | "medium" | "low" | null; }
 const SEV_COLOR = { high: "#ef4444", medium: "#f59e0b", low: "#60a5fa" };
 const SEV_BG    = { high: "rgba(239,68,68,0.1)", medium: "rgba(245,158,11,0.1)", low: "rgba(96,165,250,0.1)" };
@@ -27,7 +27,7 @@ function typeDot(dtype?: string): string {
 
 interface MarkState { col: string | null; category: string; severity: "high"|"medium"|"low"; }
 
-export default function RightPanel({ dataset }: Props) {
+export default function RightPanel({ dataset, sheetMode, onClose }: Props) {
   const [tab, setTab]           = useState<"schema"|"pii"|"stats">("schema");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [piiData, setPiiData]   = useState<Record<string, PIIInfo>>({});
@@ -94,12 +94,24 @@ export default function RightPanel({ dataset }: Props) {
     setMark(prev => ({ ...prev, col: null }));
   };
 
-  if (!dataset) return (
-    <aside style={{ width: 260, flexShrink: 0, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--surface2)", borderLeft: "1px solid var(--border)" }}>
-      <FileText size={24} style={{ color: "var(--text-dim)", opacity: 0.3 }} />
-      <p style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 10, textAlign: "center", padding: "0 20px" }}>Select a dataset to explore its schema</p>
-    </aside>
-  );
+  if (!dataset) {
+    const emptyInner = (
+      <>
+        <FileText size={24} style={{ color: "var(--text-dim)", opacity: 0.3 }} />
+        <p style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 10, textAlign: "center", padding: "0 20px" }}>Select a dataset to explore its schema</p>
+      </>
+    );
+    if (sheetMode) return (
+      <aside style={{ width: "100%", minHeight: 160, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--surface2)" }}>
+        {emptyInner}
+      </aside>
+    );
+    return (
+      <aside style={{ width: 260, flexShrink: 0, height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--surface2)", borderLeft: "1px solid var(--border)" }}>
+        {emptyInner}
+      </aside>
+    );
+  }
 
   const schema   = dataset.schema_info || {};
   const isLive   = !!(schema as Record<string,unknown>).__live__;
@@ -112,8 +124,12 @@ export default function RightPanel({ dataset }: Props) {
   const statsCols = Object.entries(stats);
   const totalCols = isLive && tables ? tables.reduce((s, t) => s + Object.keys((schema as Record<string,Record<string,unknown>>)[t] || {}).length, 0) : Object.keys(schema).filter(k => !k.startsWith("__")).length;
 
+  const asideStyle: React.CSSProperties = sheetMode
+    ? { width: "100%", display: "flex", flexDirection: "column", background: "var(--surface2)", maxHeight: "85dvh" }
+    : { width: 260, flexShrink: 0, height: "100%", display: "flex", flexDirection: "column", background: "var(--surface2)", borderLeft: "1px solid var(--border)" };
+
   return (
-    <aside style={{ width: 260, flexShrink: 0, height: "100%", display: "flex", flexDirection: "column", background: "var(--surface2)", borderLeft: "1px solid var(--border)" }}>
+    <aside style={asideStyle}>
       {/* Header */}
       <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid var(--border)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
@@ -125,6 +141,12 @@ export default function RightPanel({ dataset }: Props) {
             onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = "var(--text-dim)"}>
             <RotateCcw size={12} />
           </button>
+          {sheetMode && onClose && (
+            <button onClick={onClose}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, flexShrink: 0, display: "flex", alignItems: "center" }}>
+              <X size={16} />
+            </button>
+          )}
         </div>
         <p style={{ fontSize: 11, color: "var(--text-muted)" }}>
           {isLive ? `${tables?.length || 0} tables · live queries` : `${dataset.row_count?.toLocaleString()} rows · ${totalCols} cols`}

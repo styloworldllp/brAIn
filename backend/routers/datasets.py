@@ -376,3 +376,94 @@ def connect_database_table(req: DBTableRequest, db: Session = Depends(get_db), u
     db.add(d)
     db.commit()
     return _serialise(d)
+
+
+# ── Gmail connector ────────────────────────────────────────────────────────────
+
+class GmailConnectRequest(BaseModel):
+    name:         str
+    access_token: str
+    gmail_email:  str
+    max_emails:   int = 200
+    label:        str = "INBOX"
+    query:        str = ""
+
+
+@router.post("/connect-gmail")
+async def connect_gmail(
+    req:  GmailConnectRequest,
+    db:   Session = Depends(get_db),
+    user: User    = Depends(require_brain_access),
+):
+    """Fetch emails via Gmail API and store as a parquet dataset."""
+    import httpx
+    import pandas as pd
+
+    hdrs = {"Authorization": f"Bearer {req.access_token}"}
+
+    parts = []
+    if req.label and req.label.upper() != "ALL":
+        parts.append(f"label:{req.label}")
+    if req.query.strip():
+        parts.append(req.query.strip())
+    search_q = " ".join(parts)
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        list_resp = await client.get(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages",
+            headers=hdrs,
+            params={"maxResults": min(req.max_emails, 500), "q": search_q},
+        )
+        if list_resp.status_code == 401:
+            raise HTTPException(401, "Gmail token expired — please reconnect")
+        if list_resp.status_code != 200:
+            raise HTTPException(400, f"Gmail API error: {list_resp.text[:200]}")
+
+        message_ids = [m["id"] for m in list_resp.json().get("messages", [])]
+        if not message_ids:
+            raise HTTPException(400, "No emails found matching your criteria")
+
+        rows = []
+        for msg_id in message_ids[: req.max_emails]:
+            r = await client.get(
+                f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{msg_id}",
+                headers=hdrs,
+                params={"format": "metadata",
+                        "metadataHeaders": ["From", "To", "Subject", "Date", "Cc"]},
+            )
+            if r.status_code != 200:
+                continue
+            msg  = r.json()
+            mhdr = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
+            rows.append({
+                "id":        msg_id,
+                "thread_id": msg.get("threadId", ""),
+                "date":      mhdr.get("Date", ""),
+                "from":      mhdr.get("From", ""),
+                "to":        mhdr.get("To", ""),
+                "cc":        mhdr.get("Cc", ""),
+                "subject":   mhdr.get("Subject", ""),
+                "snippet":   msg.get("snippet", ""),
+                "labels":    ", ".join(msg.get("labelIds", [])),
+            })
+
+    if not rows:
+        raise HTTPException(400, "Could not fetch any email metadata")
+
+    df           = pd.DataFrame(rows)
+    dataset_id   = str(uuid.uuid4())
+    parquet_path = save_as_parquet(df, dataset_id)
+
+    ds = Dataset(
+        id              = dataset_id,
+        organization_id = user.organization_id,
+        name            = req.name or f"Gmail — {req.gmail_email}",
+        source_type     = "gmail",
+        file_path       = parquet_path,
+        row_count       = len(df),
+        schema_info     = get_schema_info(df),
+        sample_data     = get_sample_data(df),
+    )
+    db.add(ds)
+    db.commit()
+    return _serialise(ds)

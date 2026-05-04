@@ -103,7 +103,7 @@ export default function DatabasesPage({ onOpenDB }: Props) {
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "14px" : "28px" }}>
           {loading ? (
             <div style={{ display: "flex", justifyContent: "center", paddingTop: 80 }}><AISpinner size={24} /></div>
           ) : dbs.filter(d => d.has_access !== false).length === 0 && !userIsAdmin ? (

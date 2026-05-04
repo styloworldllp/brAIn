@@ -220,6 +220,7 @@ function LoginContent({ splashDone }: { splashDone: boolean }) {
   const [success, setSuccess]     = useState(false);
   const [typedText, setTypedText] = useState("");
   const [showCursor, setShowCursor] = useState(true);
+  const [isMobile, setIsMobile]   = useState(false);
 
   const PHRASES = [
     "answered instantly.",
@@ -274,6 +275,13 @@ function LoginContent({ splashDone }: { splashDone: boolean }) {
   useEffect(() => {
     const blink = setInterval(() => setShowCursor(v => !v), 530);
     return () => clearInterval(blink);
+  }, []);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
   useEffect(() => {
@@ -354,7 +362,7 @@ function LoginContent({ splashDone }: { splashDone: boolean }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", background: "#f4f9f6", position: "relative", overflow: "hidden" }}>
+    <div style={{ minHeight: "100vh", display: "flex", background: "#f4f9f6", position: "relative", overflowX: "hidden" }}>
 
       {/* Neural network canvas — fills entire background */}
       <NeuralCanvas />
@@ -364,7 +372,7 @@ function LoginContent({ splashDone }: { splashDone: boolean }) {
 
       {/* ── Left panel — branding ── */}
       <div style={{
-        width: "46%", minHeight: "100vh", display: "flex", flexDirection: "column",
+        width: "46%", minHeight: "100vh", display: isMobile ? "none" : "flex", flexDirection: "column",
         justifyContent: "center", padding: "64px 60px", position: "relative", zIndex: 1,
       }}>
         <div style={{
@@ -428,18 +436,18 @@ function LoginContent({ splashDone }: { splashDone: boolean }) {
       </div>
 
       {/* Thin separator */}
-      <div style={{ position: "absolute", left: "46%", top: "8%", bottom: "8%", width: 1, background: "linear-gradient(to bottom, transparent, rgba(0,168,118,0.2) 30%, rgba(0,168,118,0.2) 70%, transparent)", zIndex: 1 }} />
+      {!isMobile && <div style={{ position: "absolute", left: "46%", top: "8%", bottom: "8%", width: 1, background: "linear-gradient(to bottom, transparent, rgba(0,168,118,0.2) 30%, rgba(0,168,118,0.2) 70%, transparent)", zIndex: 1 }} />}
 
       {/* ── Right panel — glass card ── */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 40px", position: "relative", zIndex: 1 }}>
+      <div style={{ flex: 1, display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center", padding: isMobile ? "20px 16px 40px" : "48px 40px", position: "relative", zIndex: 1 }}>
 
         <div style={{
-          width: "100%", maxWidth: 420,
+          width: "100%", maxWidth: isMobile ? "100%" : 420,
           background: "rgba(255,255,255,0.88)",
           backdropFilter: "blur(28px)",
           WebkitBackdropFilter: "blur(28px)",
-          borderRadius: 24,
-          padding: "40px 36px 32px",
+          borderRadius: isMobile ? 20 : 24,
+          padding: isMobile ? "28px 20px 24px" : "40px 36px 32px",
           border: "1px solid rgba(0,168,118,0.14)",
           boxShadow: "0 0 0 1px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.08), 0 32px 80px rgba(0,0,0,0.05), 0 0 60px rgba(0,200,150,0.04)",
           opacity: mounted ? 1 : 0,
@@ -447,6 +455,16 @@ function LoginContent({ splashDone }: { splashDone: boolean }) {
           transition: "opacity 580ms cubic-bezier(0.23,1,0.32,1), transform 580ms cubic-bezier(0.23,1,0.32,1)",
           transitionDelay: "80ms",
         }}>
+
+          {/* Mobile wordmark */}
+          {isMobile && (
+            <div style={{ marginBottom: 24, textAlign: "center" }}>
+              <span style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-1.2px", color: "#1d1d1f" }}>
+                br<span style={{ background: "linear-gradient(135deg,#00a876,#00c896)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>AI</span>n
+              </span>
+              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#8a8a8e" }}>Intelligent data analysis</p>
+            </div>
+          )}
 
           {/* Card heading */}
           <div style={{ marginBottom: 26 }}>

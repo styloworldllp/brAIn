@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,24 +11,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            try {
-              var t = localStorage.getItem('brain-theme') || 'dark';
-              var h = document.documentElement;
-              h.classList.remove('dark', 'light', 'stylogreen');
-              if (t === 'light') h.classList.add('light');
-              else if (t === 'stylogreen') h.classList.add('stylogreen');
-              else if (t === 'system') {
-                h.classList.add(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-              } else {
-                h.classList.add('dark');
-              }
-            } catch(e) {}
-          })();
-        ` }} />
+        {/* interactive-widget=resizes-content shrinks the viewport when the keyboard opens,
+            so the chat input lifts above it automatically */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body>{children}</body>
+      <body>
+        {/* src= avoids React 19's inline-script warning; beforeInteractive runs before hydration */}
+        <Script src="/theme-init.js" strategy="beforeInteractive" />
+        {children}
+      </body>
     </html>
   );
 }

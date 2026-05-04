@@ -29,7 +29,7 @@ function CodeBlock({ code }: { code: string }) {
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
       </button>
       {open && (
-        <pre style={{ margin: 0, background: "var(--code-bg)", color: "var(--code-text)", fontSize: 12, lineHeight: 1.65, maxHeight: 280, overflowY: "auto", padding: "12px 16px" }}>
+        <pre style={{ margin: 0, background: "var(--code-bg)", color: "var(--code-text)", fontSize: 12, lineHeight: 1.65, maxHeight: 280, overflowY: "auto", overflowX: "auto", padding: "12px 16px", wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
           {code}
         </pre>
       )}
@@ -47,7 +47,7 @@ function OutputBlock({ output }: { output: string }) {
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
       </button>
       {open && (
-        <pre style={{ margin: 0, background: "var(--bg)", color: "var(--text)", fontSize: 12.5, lineHeight: 1.65, maxHeight: 260, overflowY: "auto", padding: "12px 16px", whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
+        <pre style={{ margin: 0, background: "var(--bg)", color: "var(--text)", fontSize: 12.5, lineHeight: 1.65, maxHeight: 260, overflowY: "auto", overflowX: "auto", padding: "12px 16px", whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "monospace" }}>
           {output}
         </pre>
       )}
@@ -225,7 +225,7 @@ export default function MessageBubble({ role, content, executedCode, codeOutput,
           <img src="/avatar.jpg" alt="brAIn" style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, marginTop: 4, objectFit: "cover", objectPosition: "top" }} />
         )}
 
-        <div style={{ maxWidth: "87%", display: "flex", flexDirection: "column", gap: 6, alignItems: isUser ? "flex-end" : "flex-start", minWidth: 0 }}>
+        <div style={{ maxWidth: "calc(100% - 44px)", display: "flex", flexDirection: "column", gap: 6, alignItems: isUser ? "flex-end" : "flex-start", minWidth: 0 }}>
           {/* Bubble */}
           {isUser ? (
             <div style={{
@@ -267,7 +267,7 @@ export default function MessageBubble({ role, content, executedCode, codeOutput,
               border: "1px solid var(--bubble-ai-border)",
               borderLeft: "3px solid var(--accent)",
               borderRadius: "4px 18px 18px 18px",
-              padding: "16px 20px",
+              padding: "14px clamp(12px, 4vw, 20px)",
               width: "100%",
             }}>
               {isStreaming && !content.trim() ? (

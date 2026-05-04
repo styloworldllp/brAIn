@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Moon, Sun, Monitor, Leaf } from "lucide-react";
+import { Moon, Sun, Monitor, Leaf, Database, X } from "lucide-react";
 import LeftSidebar from "@/components/LeftSidebar";
 import BottomNav from "@/components/BottomNav";
 import ChatInterface from "@/components/ChatInterface";
@@ -57,6 +57,7 @@ export default function Home() {
   const [theme, setTheme] = useState<Theme>("dark");
   const [isMobile, setIsMobile] = useState(false);
   const [mobileDrawer, setMobileDrawer] = useState(false);
+  const [showSchema, setShowSchema] = useState(false);
   const [isAnalysisRunning, setIsAnalysisRunning] = useState(false);
   const [neuronRefresh, setNeuronRefresh] = useState(0);
   const [neuronToast, setNeuronToast] = useState<string | null>(null);
@@ -225,6 +226,12 @@ export default function Home() {
 
           {/* Right actions */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            {view === "chat" && selectedDataset && (
+              <button onClick={() => setShowSchema(true)} title="View schema"
+                style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--surface3)", border: "1.5px solid var(--border2)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--text-muted)", flexShrink: 0 }}>
+                <Database size={14} />
+              </button>
+            )}
             <NeuronBalance refreshKey={neuronRefresh} />
             <ThemeBtn />
             <NotificationsBell isAdmin={user?.role === "admin"} />
@@ -265,6 +272,18 @@ export default function Home() {
               onDrawerClose={() => setMobileDrawer(false)}
             />
           </>
+        )}
+
+        {/* Schema bottom sheet */}
+        {showSchema && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+            onClick={() => setShowSchema(false)}>
+            <style>{`@keyframes sheetIn { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+            <div style={{ animation: "sheetIn 280ms var(--ease-drawer) both", borderRadius: "20px 20px 0 0", overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom, 0px)", background: "var(--surface2)" }}
+              onClick={e => e.stopPropagation()}>
+              <RightPanel dataset={selectedDataset} sheetMode onClose={() => setShowSchema(false)} />
+            </div>
+          </div>
         )}
 
         {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}

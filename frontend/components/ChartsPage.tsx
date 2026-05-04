@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { BarChart2, Trash2, Edit2, Check, X, ArrowLeft, Plus } from "lucide-react";
 import dynamic from "next/dynamic";
 import { withAuthHeaders } from "@/lib/auth";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -12,6 +13,7 @@ interface Props { refreshTrigger?: number; }
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
 export default function ChartsPage({ refreshTrigger = 0 }: Props) {
+  const isMobile = useIsMobile();
   const [charts, setCharts]       = useState<SavedChart[]>([]);
   const [selected, setSelected]   = useState<SavedChart | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -73,7 +75,7 @@ export default function ChartsPage({ refreshTrigger = 0 }: Props) {
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg)" }}>
         {/* Detail header */}
-        <div style={{ padding: "16px 28px", borderBottom: "1px solid var(--border)", background: "var(--surface2)", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ padding: isMobile ? "12px 14px" : "16px 28px", borderBottom: "1px solid var(--border)", background: "var(--surface2)", display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={() => setSelected(null)}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface3)", cursor: "pointer", color: "var(--text-dim)" }}>
             <ArrowLeft size={14} />
@@ -91,7 +93,7 @@ export default function ChartsPage({ refreshTrigger = 0 }: Props) {
           </div>
         </div>
         {/* Chart area */}
-        <div style={{ flex: 1, padding: "24px 28px", overflowY: "auto" }}>
+        <div style={{ flex: 1, padding: isMobile ? "12px 14px" : "24px 28px", overflowY: "auto" }}>
           <div style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px 16px", height: "100%", minHeight: 400 }}>
             <Plot data={data} layout={layout} config={{ displayModeBar: true, responsive: true }}
               style={{ width: "100%", height: "100%", minHeight: 380 }} />
@@ -105,27 +107,27 @@ export default function ChartsPage({ refreshTrigger = 0 }: Props) {
   return (
     <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
       {/* Header */}
-      <div style={{ padding: "20px 28px 18px", borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ padding: isMobile ? "14px 16px 12px" : "20px 28px 18px", borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,var(--accent),var(--accent2))", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px var(--accent-glow)" }}>
+            <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,var(--accent),var(--accent2))", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px var(--accent-glow)", flexShrink: 0 }}>
               <BarChart2 size={17} style={{ color: "#fff" }} />
             </div>
             <div>
               <h1 style={{ fontSize: 17, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.3px" }}>Charts</h1>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Saved visualizations from your analyses</p>
+              {!isMobile && <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Saved visualizations from your analyses</p>}
             </div>
           </div>
           {charts.length > 0 && (
             <button onClick={clearAll}
-              style={{ padding: "7px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>
+              style={{ padding: "7px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
               Clear all
             </button>
           )}
         </div>
       </div>
 
-      <div style={{ padding: "28px 28px" }}>
+      <div style={{ padding: isMobile ? "14px" : "28px" }}>
         {charts.length === 0 ? (
           /* Empty state */
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 60, gap: 14, textAlign: "center" }}>

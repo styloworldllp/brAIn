@@ -42,10 +42,19 @@ export default function ChatInterface({ conversationId, dataset, onChartSaved, o
   const [lastFailedMsg, setLastFailedMsg] = useState<string | null>(null);
   const [followUpMap, setFollowUpMap]     = useState<Record<string, string[]>>({});
   const [neurixStatus, setNeurixStatus]   = useState<string | null>(null);
+  const [isMobile, setIsMobile]           = useState(false);
   const bottomRef    = useRef<HTMLDivElement>(null);
   const textareaRef  = useRef<HTMLTextAreaElement>(null);
   const isFirstMsg   = useRef(true);
   const nextMsgId    = useRef<string>("");
+
+  // Detect mobile breakpoint
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     setMessages([]); setExtraDatasets([]); setFollowUpMap({}); setNeurixStatus(null);
@@ -283,7 +292,7 @@ export default function ChatInterface({ conversationId, dataset, onChartSaved, o
             <Plus size={11} /> <span className="chat-add-label">Add dataset</span>
           </button>
 
-          {showDatasetPicker && (() => {
+          {showDatasetPicker && !isMobile && (() => {
             const available = allDatasets.filter(d =>
               d.id !== dataset.id &&
               !extraDatasets.find(e => e.id === d.id) &&
@@ -344,10 +353,53 @@ export default function ChatInterface({ conversationId, dataset, onChartSaved, o
         </div>
       </div>
 
-      {/* Click outside to close dataset picker */}
-      {showDatasetPicker && (
+      {/* Click outside to close dataset picker (desktop only) */}
+      {showDatasetPicker && !isMobile && (
         <div className="fixed inset-0 z-40" onClick={() => setShowDatasetPicker(false)} />
       )}
+
+      {/* Mobile dataset picker — full bottom sheet */}
+      {showDatasetPicker && isMobile && (() => {
+        const available = allDatasets.filter(d =>
+          d.id !== dataset.id &&
+          !extraDatasets.find(e => e.id === d.id) &&
+          d.has_access !== false
+        );
+        return (
+          <div style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+            onClick={() => setShowDatasetPicker(false)}>
+            <div style={{ background: "var(--surface2)", borderRadius: "20px 20px 0 0", padding: "20px 16px", maxHeight: "70dvh", display: "flex", flexDirection: "column", gap: 12, paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))", animation: "sheetIn 280ms var(--ease-drawer) both" }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>Add dataset to analysis</p>
+                <button onClick={() => setShowDatasetPicker(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4 }}>
+                  <X size={20} />
+                </button>
+              </div>
+              <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+                {available.map(ds => {
+                  const color = ds.source_type === "mysql" ? "#fb923c" : ds.source_type === "postgres" ? "#60a5fa" : "#4ade80";
+                  return (
+                    <button key={ds.id}
+                      onClick={() => { setExtraDatasets(prev => [...prev, ds]); setShowDatasetPicker(false); }}
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 12, border: "1px solid var(--border)", background: "var(--bg)", cursor: "pointer" }}>
+                      <Database size={16} style={{ color, flexShrink: 0 }} />
+                      <div style={{ flex: 1, textAlign: "left", minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 2 }}>{ds.name}</p>
+                        <p style={{ fontSize: 11, color: "var(--text-dim)" }}>{ds.source_type} · {ds.row_count?.toLocaleString() || "live"} rows</p>
+                      </div>
+                      <Plus size={16} style={{ color: "var(--accent)", flexShrink: 0 }} />
+                    </button>
+                  );
+                })}
+                {available.length === 0 && (
+                  <p style={{ textAlign: "center", padding: "24px 0", fontSize: 13, color: "var(--text-dim)" }}>No other datasets available</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {showPlotModal && conversationId && (
         <GeneratePlotModal dataset={dataset} conversationId={conversationId}
@@ -467,13 +519,13 @@ export default function ChatInterface({ conversationId, dataset, onChartSaved, o
 
       {/* Input — global command bar */}
       {dataset.is_deleted ? (
-        <div style={{ padding: "0 20px 20px" }}>
+        <div style={{ padding: isMobile ? "0 12px 16px" : "0 20px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "14px 20px", borderRadius: 20, background: "var(--surface)", border: "1.5px solid var(--border)", opacity: 0.5 }}>
             <span style={{ fontSize: 13, color: "var(--text-dim)" }}>Chat input disabled — dataset has been deleted</span>
           </div>
         </div>
       ) : (
-        <div style={{ padding: "0 20px 20px", background: "transparent" }}>
+        <div style={{ padding: isMobile ? "0 12px 16px" : "0 20px 20px", background: "transparent" }}>
           <div style={{
             display: "flex", alignItems: "flex-end", gap: 0,
             background: "var(--surface)",

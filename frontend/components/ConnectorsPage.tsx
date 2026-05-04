@@ -12,6 +12,7 @@ import { NeuronIcon } from "./NeuronIcon";
 import { withAuthHeaders } from "@/lib/auth";
 import { Dataset, fetchDatasets, deleteDataset, fetchNeurixStatus, NeurixStatus } from "@/lib/api";
 import TableBrowserModal from "./TableBrowserModal";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
@@ -31,45 +32,47 @@ const inp = {
 };
 
 export default function ConnectorsPage() {
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>("ai");
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg)" }}>
       {/* Header */}
-      <div style={{ padding: "20px 28px 0", background: "var(--surface2)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,var(--accent),var(--accent2))", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px var(--accent-glow)" }}>
+      <div style={{ padding: isMobile ? "12px 14px 0" : "20px 28px 0", background: "var(--surface2)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: isMobile ? 12 : 18 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,var(--accent),var(--accent2))", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px var(--accent-glow)", flexShrink: 0 }}>
             <Plug size={17} style={{ color: "#fff" }} />
           </div>
           <div>
             <h1 style={{ fontSize: 17, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.3px" }}>Connectors</h1>
-            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Manage AI providers, databases, and third-party integrations</p>
+            {!isMobile && <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Manage AI providers, databases, and third-party integrations</p>}
           </div>
         </div>
 
-        {/* Tab bar */}
-        <div style={{ display: "flex", gap: 0 }}>
+        {/* Tab bar — scrollable on mobile */}
+        <div style={{ display: "flex", gap: 0, overflowX: "auto", scrollbarWidth: "none" }}>
           {([
-            ["ai",           Cpu,       "AI Models"],
-            ["databases",    Database,  "Databases"],
-            ["erp",          Building2, "ERP"],
-            ["integrations", Cloud,     "Integrations"],
-          ] as const).map(([id, Icon, label]) => {
+            ["ai",           Cpu,       "AI Models",    "AI"],
+            ["databases",    Database,  "Databases",    "DBs"],
+            ["erp",          Building2, "ERP",          "ERP"],
+            ["integrations", Cloud,     "Integrations", "Apps"],
+          ] as const).map(([id, Icon, label, shortLabel]) => {
             const active = tab === id;
             return (
               <button key={id} onClick={() => setTab(id)}
                 style={{
-                  display: "flex", alignItems: "center", gap: 7, padding: "10px 18px",
-                  fontSize: 13, fontWeight: active ? 600 : 400, cursor: "pointer",
-                  background: "transparent", border: "none",
+                  display: "flex", alignItems: "center", gap: isMobile ? 5 : 7,
+                  padding: isMobile ? "8px 14px" : "10px 18px",
+                  fontSize: isMobile ? 12 : 13, fontWeight: active ? 600 : 400,
+                  cursor: "pointer", background: "transparent", border: "none",
                   color: active ? "var(--accent-light)" : "var(--text-muted)",
                   borderBottom: active ? "2px solid var(--accent)" : "2px solid transparent",
-                  transition: "all 120ms ease",
+                  transition: "all 120ms ease", whiteSpace: "nowrap", flexShrink: 0,
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.color = "var(--text)"; }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.color = "var(--text-muted)"; }}>
-                <Icon size={14} />
-                {label}
+                <Icon size={13} />
+                {isMobile ? shortLabel : label}
               </button>
             );
           })}
@@ -447,7 +450,7 @@ function AITab() {
   const popupProvider = AI_PROVIDERS.find(p => p.id === popup) ?? null;
 
   return (
-    <div style={{ padding: "28px 28px", maxWidth: 900 }}>
+    <div style={{ padding: "clamp(14px,4vw,28px)", maxWidth: 900 }}>
       <p style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 32 }}>
         Click an AI icon to configure and connect. The active engine is highlighted — others fade until you switch.
       </p>
@@ -763,7 +766,7 @@ function ERPTab() {
   };
 
   return (
-    <div style={{ padding: "28px 28px", maxWidth: 860 }}>
+    <div style={{ padding: "clamp(14px,4vw,28px)", maxWidth: 860 }}>
       <p style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 28 }}>
         Connect brAIn to your ERP for seamless data analysis. <strong style={{ color: "var(--text)" }}>styloBMS</strong> is the recommended home ERP — natively built for AI-native workflows.
       </p>
@@ -874,9 +877,10 @@ const DB_CONNECTORS = [
   { id: "mysql",    name: "MySQL",         port: "3306", accent: "#fb923c", logo: <MysqlLogo /> },
   { id: "postgres", name: "PostgreSQL",    port: "5432", accent: "#60a5fa", logo: <PgLogo /> },
   { id: "sheets",   name: "Google Sheets", port: "",     accent: "#4ade80", logo: <SheetsLogo /> },
+  { id: "gmail",    name: "Gmail",         port: "",     accent: "#ea4335", logo: <GmailLogo /> },
 ] as const;
 
-type DBConnType = "mysql" | "postgres" | "sheets";
+type DBConnType = "mysql" | "postgres" | "sheets" | "gmail";
 type DBStep = "list" | "pick" | "form" | "browse";
 
 function DatabasesTab() {
@@ -909,7 +913,7 @@ function DatabasesTab() {
 
   if (step === "browse" && browse) {
     return (
-      <div style={{ padding: "28px 28px" }}>
+      <div style={{ padding: "clamp(14px,4vw,28px)" }}>
         <TableBrowserModal
           connStr={browse.connStr}
           dbType={browse.dbType}
@@ -927,7 +931,7 @@ function DatabasesTab() {
   }
 
   return (
-    <div style={{ padding: "28px 28px", maxWidth: 860 }}>
+    <div style={{ padding: "clamp(14px,4vw,28px)", maxWidth: 860 }}>
       {step === "list" && (
         <>
           {/* Connector type cards */}
@@ -1216,7 +1220,7 @@ const INTEGRATIONS = [
 
 function IntegrationsTab() {
   return (
-    <div style={{ padding: "28px 28px" }}>
+    <div style={{ padding: "clamp(14px,4vw,28px)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, padding: "12px 16px", borderRadius: 10, background: "var(--accent-dim)", border: "1px solid var(--border-accent)" }}>
         <Zap size={14} style={{ color: "var(--accent-light)", flexShrink: 0 }} />
         <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>
@@ -1264,6 +1268,9 @@ function PgLogo() {
 }
 function SheetsLogo() {
   return <svg viewBox="0 0 24 24" style={{ width: 18, height: 18 }}><rect width="24" height="24" rx="5" fill="#0F9D58" /><rect x="6" y="8" width="12" height="9" rx="1" fill="white" opacity="0.2" /><rect x="7" y="10" width="5" height="1.5" rx="0.5" fill="white" /><rect x="7" y="12.5" width="10" height="1.5" rx="0.5" fill="white" /><rect x="7" y="15" width="7" height="1.5" rx="0.5" fill="white" /></svg>;
+}
+function GmailLogo() {
+  return <svg viewBox="0 0 24 24" style={{ width: 18, height: 18 }}><rect width="24" height="24" rx="5" fill="#fff" /><path d="M4 8l8 5.5L20 8v9a1 1 0 01-1 1H5a1 1 0 01-1-1V8z" fill="#ea4335" /><path d="M4 8l8 5.5L20 8" fill="none" stroke="#ea4335" strokeWidth="1.5" /><path d="M4 7.5h16L12 13z" fill="#fbbc04" opacity="0.6" /></svg>;
 }
 function SlackLogo() {
   return <svg viewBox="0 0 24 24" style={{ width: 16, height: 16 }}><rect width="24" height="24" rx="5" fill="#4a154b" /><text x="12" y="16" fontFamily="Arial" fontSize="9" fontWeight="bold" fill="#e879f9" textAnchor="middle">#</text></svg>;

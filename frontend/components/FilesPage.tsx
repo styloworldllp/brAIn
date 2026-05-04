@@ -137,7 +137,7 @@ export default function FilesPage({ onOpenFile }: Props) {
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "14px" : "28px" }}>
           {loading ? (
             <div style={{ display: "flex", justifyContent: "center", paddingTop: 80 }}><AISpinner size={24} /></div>
           ) : filtered.length === 0 ? (
@@ -154,17 +154,23 @@ export default function FilesPage({ onOpenFile }: Props) {
                 <Upload size={14} /> Upload your first file
               </button>
             </div>
+          ) : isMobile ? (
+            <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid var(--border)", background: "var(--surface)" }}>
+              {filtered.map((ds, idx) => (
+                <FileRow key={ds.id} ds={ds} isLast={idx === filtered.length - 1} isMobile
+                  onOpen={() => onOpenFile(ds)} onDelete={e => handleDelete(e, ds.id)} />
+              ))}
+            </div>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid var(--border)", background: "var(--surface)", minWidth: isMobile ? 480 : undefined }}>
-                {/* Table header */}
+              <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid var(--border)", background: "var(--surface)" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 120px 100px", padding: "10px 20px", background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
                   {["File Name", "Type", "Rows", "Uploaded", ""].map(h => (
                     <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
                   ))}
                 </div>
                 {filtered.map((ds, idx) => (
-                  <FileRow key={ds.id} ds={ds} isLast={idx === filtered.length - 1}
+                  <FileRow key={ds.id} ds={ds} isLast={idx === filtered.length - 1} isMobile={false}
                     onOpen={() => onOpenFile(ds)} onDelete={e => handleDelete(e, ds.id)} />
                 ))}
               </div>
@@ -295,9 +301,31 @@ export default function FilesPage({ onOpenFile }: Props) {
   );
 }
 
-function FileRow({ ds, isLast, onOpen, onDelete }: { ds: Dataset; isLast: boolean; onOpen: () => void; onDelete: (e: React.MouseEvent) => void }) {
+function FileRow({ ds, isLast, isMobile, onOpen, onDelete }: { ds: Dataset; isLast: boolean; isMobile: boolean; onOpen: () => void; onDelete: (e: React.MouseEvent) => void }) {
   const [hover, setHover] = useState(false);
   const ext = ds.source_type.toUpperCase();
+
+  if (isMobile) return (
+    <div onClick={onOpen} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: isLast ? "none" : "1px solid var(--border)", cursor: "pointer" }}>
+      <div style={{ width: 36, height: 36, borderRadius: 9, background: "var(--accent-dim)", border: "1px solid var(--border-accent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Table2 size={15} style={{ color: "var(--accent)" }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text)", margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ds.name}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent-light)" }}>{ext}</span>
+          <span style={{ fontSize: 10, color: "var(--text-dim)" }}>{ds.row_count?.toLocaleString() ?? "—"} rows</span>
+          <span style={{ fontSize: 10, color: "var(--text-dim)" }}>{new Date(ds.created_at).toLocaleDateString()}</span>
+        </div>
+      </div>
+      <button onClick={onDelete} style={{ padding: 8, borderRadius: 6, background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", flexShrink: 0, display: "flex" }}
+        onMouseEnter={e => (e.currentTarget.style.color = "#f87171")}
+        onMouseLeave={e => (e.currentTarget.style.color = "var(--text-dim)")}>
+        <Trash2 size={15} />
+      </button>
+    </div>
+  );
+
   return (
     <div onClick={onOpen} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 120px 100px", padding: "13px 20px", alignItems: "center", cursor: "pointer", background: hover ? "var(--accent-dim)" : "transparent", borderBottom: isLast ? "none" : "1px solid var(--border)", transition: "background 100ms ease" }}>

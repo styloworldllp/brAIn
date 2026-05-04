@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Calendar, Trash2, Edit2, Check, X, ToggleLeft, ToggleRight, Mail, Clock, ChevronDown, ChevronRight } from "lucide-react";
 import { withAuthHeaders } from "@/lib/auth";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000") + "/api";
 
@@ -25,6 +26,7 @@ const CRON_LABELS: Record<string, string> = {
 const inpStyle = { background: "var(--surface3)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 7, padding: "6px 10px", fontSize: 12, width: "100%", outline: "none", boxSizing: "border-box" as const };
 
 export default function SchedulesPage() {
+  const isMobile = useIsMobile();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm]   = useState<Partial<Schedule>>({});
@@ -66,19 +68,19 @@ export default function SchedulesPage() {
   return (
     <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
       {/* Header */}
-      <div style={{ padding: "20px 28px 18px", borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
+      <div style={{ padding: isMobile ? "14px 16px 12px" : "20px 28px 18px", borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#3b82f6,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(59,130,246,0.3)" }}>
+          <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#3b82f6,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(59,130,246,0.3)", flexShrink: 0 }}>
             <Calendar size={17} style={{ color: "#fff" }} />
           </div>
           <div>
             <h1 style={{ fontSize: 17, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.3px" }}>Schedules</h1>
-            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Automated reports delivered to your inbox</p>
+            {!isMobile && <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Automated reports delivered to your inbox</p>}
           </div>
         </div>
       </div>
 
-      <div style={{ padding: "28px 28px" }}>
+      <div style={{ padding: isMobile ? "14px" : "28px" }}>
         {schedules.length === 0 ? (
           /* Empty state */
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 60, gap: 14, textAlign: "center" }}>
